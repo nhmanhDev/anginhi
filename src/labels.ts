@@ -32,39 +32,60 @@ export const COURSE_LABELS: Record<Course, string> = {
 
 export const BUDGETS = [35, 50, 75, 100, 150] as const
 
-const TYPE_EN: Record<DishType, string> = {
-  com: 'Rice',
-  'bun-pho': 'Bún / phở',
-  mi: 'Noodles',
-  banh: 'Bánh',
-  lau: 'Hotpot',
-  khac: 'Other',
+const TYPE_I18N: Record<Lang, Record<DishType, string>> = {
+  vi: TYPE_LABELS,
+  en: {
+    com: 'Rice',
+    'bun-pho': 'Bún / phở',
+    mi: 'Noodles',
+    banh: 'Bánh',
+    lau: 'Hotpot',
+    khac: 'Other',
+  },
+  zh: TYPE_LABELS,
+  ko: TYPE_LABELS,
+  ja: TYPE_LABELS,
+  hi: TYPE_LABELS,
 }
 
-const CUISINE_EN: Record<Cuisine, string> = {
-  viet: 'Vietnamese',
-  nhat: 'Japanese',
-  han: 'Korean',
-  thai: 'Thai',
-  au: 'Western',
+const CUISINE_I18N: Record<Lang, Record<Cuisine, string>> = {
+  vi: CUISINE_LABELS,
+  en: {
+    viet: 'Vietnamese',
+    nhat: 'Japanese',
+    han: 'Korean',
+    thai: 'Thai',
+    au: 'Western',
+  },
+  zh: CUISINE_LABELS,
+  ko: CUISINE_LABELS,
+  ja: CUISINE_LABELS,
+  hi: CUISINE_LABELS,
 }
 
-const REGION_EN: Record<Region, string> = {
-  bac: 'North',
-  trung: 'Central',
-  nam: 'South',
+const REGION_I18N: Record<Lang, Record<Region, string>> = {
+  vi: REGION_LABELS,
+  en: {
+    bac: 'North',
+    trung: 'Central',
+    nam: 'South',
+  },
+  zh: REGION_LABELS,
+  ko: REGION_LABELS,
+  ja: REGION_LABELS,
+  hi: REGION_LABELS,
 }
 
 export function typeLabel(id: DishType, lang: Lang) {
-  return lang === 'en' ? TYPE_EN[id] : TYPE_LABELS[id]
+  return TYPE_I18N[lang][id]
 }
 
 export function cuisineLabel(id: Cuisine, lang: Lang) {
-  return lang === 'en' ? CUISINE_EN[id] : CUISINE_LABELS[id]
+  return CUISINE_I18N[lang][id]
 }
 
 export function regionLabel(id: Region, lang: Lang) {
-  return lang === 'en' ? REGION_EN[id] : REGION_LABELS[id]
+  return REGION_I18N[lang][id]
 }
 
 export const TYPE_OPTIONS = (Object.keys(TYPE_LABELS) as DishType[]).map((id) => [id, TYPE_LABELS[id]] as const)

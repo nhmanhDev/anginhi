@@ -37,7 +37,11 @@ Hộp thoại, không phải trang riêng. Ẩn món có sẵn; thêm tối đa 
 
 ## Ngôn ngữ
 
-Dropdown có vi, en, zh, ko, ja, hi. Bản đầy đủ cho zh/ko/ja/hi nằm ở đợt nâng cấp theme/i18n. Tên món giữ tiếng Việt; bản không-vi dùng tên romanized.
+Dropdown đủ vi, en, zh, ko, ja, hi. Tên món giữ tiếng Việt; bản không-vi dùng tên romanized.
+
+## Giao diện
+
+Nút sáng/tối trên header. Lần đầu theo hệ thống (`prefers-color-scheme`), đổi tay thì nhớ trên trình duyệt. Donate / modal cà phê luôn nền tối.
 
 ## Donate
 

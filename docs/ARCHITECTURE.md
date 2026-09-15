@@ -13,7 +13,9 @@ catalog + custom → eligibleDishes(filters) → pickWeighted / fillSlots → sh
 | File | Việc |
 |---|---|
 | `src/App.tsx` | UI + state React |
-| `src/store.ts` | parse/write `localStorage` `anginhi-v1` |
+| `src/store.ts` | parse/write `localStorage` `anginhi-v1` (`mode` = cách chọn, `ui.theme` = sáng/tối) |
+| `src/theme.ts` | `resolveTheme(stored, prefersDark)` |
+| `src/ErrorCard.tsx` | banner lỗi, `role="alert"` |
 | `src/filter.ts` | AND giữa nhóm, OR trong nhóm; budget = trần giá |
 | `src/pick.ts` | random có trọng số budget; unseen (duyên); 5 ô (quẻ) |
 | `src/maps.ts` | search URL Maps / Grab / ShopeeFood |

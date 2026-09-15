@@ -6,8 +6,9 @@ import { StampMany } from './Chips.tsx'
 import { COURSE_I18N, LANG_LOCALE, LANG_OPTIONS, THEME_I18N, THEMES, money, t } from './copy.ts'
 import { modeText } from './modes.ts'
 import { Donate } from './Donate.tsx'
+import { ErrorCard } from './ErrorCard.tsx'
 import { eligibleDishes } from './filter.ts'
-import { BowlMark, ChevronMark, CourseMark, GlobeMark, ThemeMark, VolumeMark } from './icons.tsx'
+import { BowlMark, ChevronMark, CourseMark, GlobeMark, MoonMark, SunMark, ThemeMark, VolumeMark } from './icons.tsx'
 import {
   BUDGETS,
   CUISINE_OPTIONS,
@@ -25,6 +26,7 @@ import { fillSlots, pickUnseen, pickWeighted, weightedMean } from './pick.ts'
 import { Scene } from './Scene.tsx'
 import { playPick, playReveal } from './sound.ts'
 import { emptyStore, parseStore, STORAGE_KEY, writeStore, type Store } from './store.ts'
+import { resolveTheme } from './theme.ts'
 import type { Course, Cuisine, Dish, DishType, Lang, Region, ThemeId } from './types.ts'
 
 function loadStore(): Store {
@@ -124,6 +126,8 @@ export function App() {
   const [more, setMore] = useState(false)
   const [query, setQuery] = useState('')
   const [copied, setCopied] = useState(false)
+  const [copyError, setCopyError] = useState(false)
+  const [prefersDark, setPrefersDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches)
   const [spendDraft, setSpendDraft] = useState(String(store.filters.budget ?? 50))
   const [slot, setSlot] = useState<number | null>(null)
   const [lots, setLots] = useState<(Dish | null)[]>(emptyLots)
@@ -133,7 +137,8 @@ export function App() {
   const cancel = useRef(0)
   const think = useRef(0)
   const copy = t(store.lang)
-  const mode = modeText(store.theme, store.lang)
+  const mode = modeText(store.mode, store.lang)
+  const resolvedTheme = resolveTheme(store.ui.theme, prefersDark)
 
   const pool = useMemo(() => [...CATALOG, ...store.custom], [store.custom])
   const eligible = useMemo(
@@ -153,7 +158,7 @@ export function App() {
     ? copy.empty
     : busy && !shown
       ? mode.picking
-      : store.theme === 'que' && lotsDealt && slot == null
+      : store.mode === 'que' && lotsDealt && slot == null
         ? mode.dealt
         : live
           ? dishName(live, store.lang)
@@ -173,15 +178,26 @@ export function App() {
     .filter((dish): dish is Dish => Boolean(dish))
 
   useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const onChange = () => setPrefersDark(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
+  useEffect(() => {
     document.documentElement.lang = store.lang
-  }, [store.lang])
+    document.documentElement.dataset.theme = resolvedTheme
+    document.title = copy.brand
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) meta.setAttribute('content', resolvedTheme === 'dark' ? '#0f141c' : '#f2f0e7')
+  }, [store.lang, resolvedTheme, copy.brand])
 
   useEffect(() => {
     const raw = new URLSearchParams(window.location.search).get('mode')
     if (!raw || !THEMES.includes(raw as ThemeId)) return
     setStore((current) => {
-      if (current.theme === raw) return current
-      const next = { ...current, theme: raw as ThemeId }
+      if (current.mode === raw) return current
+      const next = { ...current, mode: raw as ThemeId }
       writeStore(next, localStorage)
       return next
     })
@@ -199,7 +215,7 @@ export function App() {
     setLots(emptyLots())
     setLotsDealt(false)
     setSlot(null)
-  }, [eligibleKey, store.theme])
+  }, [eligibleKey, store.mode])
 
   function commit(next: Store) {
     setStore(next)
@@ -245,7 +261,7 @@ export function App() {
     window.clearTimeout(think.current)
     setBusy(true)
     setReveal(false)
-    if (store.theme === 'meo' && !prefersReducedMotion() && list.length > 1) {
+    if (store.mode === 'meo' && !prefersReducedMotion() && list.length > 1) {
       setShown(null)
       think.current = window.setTimeout(() => shuffleDishes(winner, list), 700)
       return
@@ -284,7 +300,7 @@ export function App() {
 
   function pick() {
     if (busy || empty || !customValid) return
-    if (store.theme === 'que') {
+    if (store.mode === 'que') {
       if (!lotsDealt) {
         dealLots()
         return
@@ -296,7 +312,7 @@ export function App() {
       dealLots()
       return
     }
-    runPick(store.theme === 'duyen')
+    runPick(store.mode === 'duyen')
   }
 
   function pickFromSlot(index: number) {
@@ -317,7 +333,7 @@ export function App() {
     setLots(emptyLots())
     setLotsDealt(false)
     setAlbumOpen(false)
-    commit({ ...store, theme: id })
+    commit({ ...store, mode: id })
     const url = new URL(window.location.href)
     url.searchParams.set('mode', id)
     window.history.replaceState(null, '', url)
@@ -342,7 +358,7 @@ export function App() {
   }
 
   return (
-    <div className="site" data-mode={store.theme}>
+    <div className="site" data-mode={store.mode}>
       <header className="bar">
         <a className="brand" href="#chon">
           <BowlMark />
@@ -355,6 +371,19 @@ export function App() {
           {copy.stock}
         </a>
         <LangPick lang={store.lang} label={copy.language} onChange={setLang} />
+        <button
+          type="button"
+          className="icon-btn"
+          id="btn-theme-toggle"
+          aria-pressed={resolvedTheme === 'dark'}
+          aria-label={resolvedTheme === 'dark' ? copy.themeLight : copy.themeDark}
+          title={copy.themeToggle}
+          onClick={() =>
+            commit({ ...store, ui: { theme: resolvedTheme === 'dark' ? 'light' : 'dark' } })
+          }
+        >
+          {resolvedTheme === 'dark' ? <SunMark /> : <MoonMark />}
+        </button>
         <Donate label={copy.donate} hint={copy.donateHint} closeLabel={copy.close} />
         <button
           type="button"
@@ -378,8 +407,8 @@ export function App() {
             <button
               key={id}
               type="button"
-              aria-pressed={store.theme === id}
-              className={store.theme === id ? 'on' : undefined}
+              aria-pressed={store.mode === id}
+              className={store.mode === id ? 'on' : undefined}
               onClick={() => setMode(id)}
             >
               <ThemeMark id={id} />
@@ -394,17 +423,24 @@ export function App() {
           <h1>{mode.title}</h1>
           <p>
             {mode.opens}: {store.picks.toLocaleString(LANG_LOCALE[store.lang])}
-            {store.theme === 'duyen' ? ` · ${mode.collection}: ${store.seen.length}/${pool.length}` : ''}
+            {store.mode === 'duyen' ? ` · ${mode.collection}: ${store.seen.length}/${pool.length}` : ''}
             {result && !busy
               ? ` · ${copy.last}: ${dishName(result, store.lang)}`
               : ` · ${copy.inStock}: ${eligible.length} ${copy.dishes}`}
-            {storageError ? ` · ${storageError}` : ''}
           </p>
+          {storageError ? (
+            <ErrorCard
+              title={copy.errorStorageTitle}
+              message={storageError}
+              closeLabel={copy.close}
+              onClose={() => setStorageError('')}
+            />
+          ) : null}
         </div>
 
         <section className="stage" id="chon" aria-live="polite">
           <Scene
-            mode={store.theme}
+            mode={store.mode}
             busy={busy}
             disabled={busy || empty || !customValid}
             actLabel={busy ? mode.picking : result ? mode.again : mode.pick}
@@ -545,7 +581,7 @@ export function App() {
             <button type="button" className="go" onClick={pick} disabled={busy || empty || !customValid}>
               {busy
                 ? mode.picking
-                : store.theme === 'que'
+                : store.mode === 'que'
                   ? !lotsDealt
                     ? mode.pick
                     : slot == null
@@ -702,9 +738,11 @@ export function App() {
                   try {
                     await navigator.clipboard.writeText(line)
                     setCopied(true)
+                    setCopyError(false)
                     window.setTimeout(() => setCopied(false), 1500)
                   } catch {
                     setCopied(false)
+                    setCopyError(true)
                   }
                 }}
               >
@@ -714,6 +752,14 @@ export function App() {
                 {copy.continue}
               </button>
             </div>
+            {copyError ? (
+              <ErrorCard
+                title={copy.errorCopyTitle}
+                message={copy.errorCopyBody}
+                closeLabel={copy.close}
+                onClose={() => setCopyError(false)}
+              />
+            ) : null}
           </div>
         </div>
       )}

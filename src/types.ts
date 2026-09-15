@@ -3,6 +3,7 @@ export type Cuisine = 'viet' | 'nhat' | 'han' | 'thai' | 'au'
 export type Region = 'bac' | 'trung' | 'nam'
 export type Course = 'chinh' | 'vat' | 'uong' | 'nhau'
 export type ThemeId = 'ket' | 'duyen' | 'khui' | 'que' | 'meo'
+export type UiTheme = 'light' | 'dark'
 export type Lang = 'vi' | 'en' | 'zh' | 'ko' | 'ja' | 'hi'
 
 export type Dish = {

@@ -28,20 +28,6 @@ export function GlobeMark() {
   )
 }
 
-export function HeartMark() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-      <path
-        d="M12 19.4S4.6 14.2 4.6 9.8A3.9 3.9 0 0 1 12 7.6a3.9 3.9 0 0 1 7.4 2.2c0 4.4-7.4 9.6-7.4 9.6Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
 export function VolumeMark({ on }: { on: boolean }) {
   return on ? (
     <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">

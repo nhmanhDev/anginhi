@@ -20,7 +20,8 @@ export function StampMany<T extends string>({ label, options, value, onToggle, l
                 checked={on}
                 onChange={() => onToggle(option.id)}
               />
-              {option.label}
+              <span className="stamp-indicator" aria-hidden="true" />
+              <span className="stamp-text">{option.label}</span>
             </label>
           )
         })}

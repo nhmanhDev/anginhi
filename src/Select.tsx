@@ -58,12 +58,18 @@ export function Select<T extends string>({
                 type="button"
                 role="option"
                 aria-selected={item.id === value}
+                className={item.id === value ? 'is-selected' : undefined}
                 onClick={() => {
                   onChange(item.id)
                   setOpen(false)
                 }}
               >
-                {item.label}
+                <span>{item.label}</span>
+                {item.id === value ? (
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="menu-check">
+                    <path d="M3.5 8.5L6.5 11.5L12.5 4.5" />
+                  </svg>
+                ) : null}
               </button>
             </li>
           ))}

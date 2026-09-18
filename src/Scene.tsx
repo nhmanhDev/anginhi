@@ -49,10 +49,19 @@ export function Scene({
         aria-label={actLabel}
         onClick={onAct}
       >
-        <span className="vault-frame">
-          <span className="vault-door" />
-          <span className="vault-lock" />
-          <span className="vault-name">{busy ? '' : liveName}</span>
+        <span className="vault-pedestal">
+          <span className="vault-frame">
+            <span className="vault-door">
+              <span className="vault-rivets" />
+              <span className="vault-wheel">
+                <span className="vault-spoke" />
+                <span className="vault-spoke" />
+              </span>
+              <span className="vault-handle" />
+            </span>
+            <span className="vault-glow" />
+            <span className="vault-name">{busy ? '' : liveName}</span>
+          </span>
         </span>
       </button>
     )
@@ -67,9 +76,19 @@ export function Scene({
         aria-label={actLabel}
         onClick={onAct}
       >
-        <span className="jar-lid" />
+        <span className="jar-steam">
+          <span className="steam-puff puff-1" />
+          <span className="steam-puff puff-2" />
+        </span>
+        <span className="jar-lid">
+          <span className="jar-knot" />
+        </span>
+        <span className="jar-neck" />
         <span className="jar-body">
-          <span className="jar-name">{busy ? '' : liveName}</span>
+          <span className="jar-pattern" />
+          <span className="jar-seal">
+            <span className="jar-name">{busy ? '' : liveName}</span>
+          </span>
         </span>
       </button>
     )
@@ -84,14 +103,27 @@ export function Scene({
         aria-label={actLabel}
         onClick={onAct}
       >
-        <span className="cat-clock">
-          {clock} · {clockLine}
-        </span>
-        <span className="cat-figure">
-          <span className="cat-ear left" />
-          <span className="cat-ear right" />
-          <span className="cat-head" />
-        </span>
+        <div className="cat-clock-badge">
+          <span className="cat-clock-time">{clock}</span>
+          <span className="cat-clock-sep">·</span>
+          <span className="cat-clock-label">{clockLine}</span>
+        </div>
+        <div className="cat-podium">
+          <span className="cat-figure">
+            <span className="cat-ear left" />
+            <span className="cat-ear right" />
+            <span className="cat-head">
+              <span className="cat-eye left" />
+              <span className="cat-eye right" />
+              <span className="cat-nose" />
+            </span>
+            <span className="cat-paw" />
+            <span className="cat-collar">
+              <span className="cat-bell" />
+            </span>
+          </span>
+        </div>
+        {liveName && !busy && <div className="cat-speech">{liveName}</div>}
       </button>
     )
   }
@@ -99,7 +131,8 @@ export function Scene({
   if (mode === 'duyen') {
     return (
       <div className={busy ? 'prop meet is-busy' : 'prop meet'}>
-        <button type="button" className="meet-album" onClick={onCollection}>
+        <button type="button" className="meet-album-pill" onClick={onCollection}>
+          <span className="meet-album-dot" />
           {seenLabel}
         </button>
         <button
@@ -109,8 +142,11 @@ export function Scene({
           aria-label={actLabel}
           onClick={onAct}
         >
-          <span className="meet-card back" />
-          <span className="meet-card">
+          <span className="meet-card back back-2" />
+          <span className="meet-card back back-1" />
+          <span className="meet-card front">
+            <span className="meet-card-border" />
+            <span className="meet-seal" />
             <span className="meet-name">{busy ? '' : liveName}</span>
           </span>
         </button>
@@ -120,7 +156,10 @@ export function Scene({
 
   return (
     <div className={busy ? 'scene is-busy' : 'scene'} aria-hidden={false}>
-      <img className="scene-photo" src="/scene.png" alt="" />
+      <div className="scene-visual-wrap">
+        <img className="scene-photo" src="/scene.png" alt="" />
+        <div className="scene-vignette" />
+      </div>
       <div className="lot-slots" role="group" aria-label={actLabel}>
         {slots.map((slot, index) => (
           <button
@@ -128,10 +167,14 @@ export function Scene({
             type="button"
             disabled={disabled}
             aria-pressed={slot.on}
-            className={slot.on ? 'on' : undefined}
+            className={slot.on ? 'lot-slot on' : 'lot-slot'}
             onClick={() => onSlot(index)}
           >
-            {slot.open ? slot.label : String(index + 1)}
+            <span className="lot-num">{`0${index + 1}`}</span>
+            <span className="lot-content">
+              <span className="lot-label">{slot.open ? slot.label : `Quẻ ${index + 1}`}</span>
+            </span>
+            <span className="lot-shine" />
           </button>
         ))}
       </div>

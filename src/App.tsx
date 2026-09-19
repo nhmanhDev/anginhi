@@ -357,302 +357,408 @@ export function App() {
     commit({ ...store, lang })
   }
 
+  function toggleBuiltin(id: string) {
+    const next = toggle(store.disabled, id)
+    const remain = eligibleDishes(pool, next, { types: [], cuisines: [], regions: [] })
+    if (remain.length === 0) return
+    commit({ ...store, disabled: next, lastId: store.lastId === id ? null : store.lastId })
+  }
+
+  function enableAll() {
+    commit({ ...store, disabled: [] })
+  }
+
+  function clearSaved() {
+    commit({
+      ...store,
+      custom: [],
+      disabled: [],
+      lastId: store.lastId && CATALOG.some((dish) => dish.id === store.lastId) ? store.lastId : null,
+      recent: store.recent.filter((id) => CATALOG.some((dish) => dish.id === id)),
+    })
+  }
+
+  function addCustom(dish: Dish) {
+    commit({ ...store, custom: [...store.custom, dish] })
+  }
+
+  function updateCustom(dish: Dish) {
+    commit({
+      ...store,
+      custom: store.custom.map((item) => (item.id === dish.id ? dish : item)),
+    })
+  }
+
+  function removeCustom(id: string) {
+    const nextCustom = store.custom.filter((dish) => dish.id !== id)
+    const remain = eligibleDishes([...CATALOG, ...nextCustom], store.disabled, {
+      types: [],
+      cuisines: [],
+      regions: [],
+    })
+    if (remain.length === 0) return
+    commit({
+      ...store,
+      custom: nextCustom,
+      lastId: store.lastId === id ? null : store.lastId,
+      recent: store.recent.filter((item) => item !== id),
+    })
+  }
+
   return (
     <div className="site" data-mode={store.mode}>
-      <header className="bar">
-        <a className="brand" href="#chon">
-          <BowlMark />
-          <span>
-            {copy.brand}
-            <small>{copy.tag}</small>
-          </span>
-        </a>
-        <a className="header-link" href="#kho">
-          {copy.stock}
-        </a>
-        <LangPick lang={store.lang} label={copy.language} onChange={setLang} />
-        <button
-          type="button"
-          className="icon-btn"
-          id="btn-theme-toggle"
-          aria-pressed={resolvedTheme === 'dark'}
-          aria-label={resolvedTheme === 'dark' ? copy.themeLight : copy.themeDark}
-          title={copy.themeToggle}
-          onClick={() =>
-            commit({ ...store, ui: { theme: resolvedTheme === 'dark' ? 'light' : 'dark' } })
-          }
-        >
-          {resolvedTheme === 'dark' ? <SunMark /> : <MoonMark />}
-        </button>
-        <Donate label={copy.donate} hint={copy.donateHint} closeLabel={copy.close} />
-        <button
-          type="button"
-          className="icon-btn"
-          aria-pressed={store.sound}
-          aria-label={store.sound ? copy.soundMute : copy.soundUnmute}
-          title={store.sound ? copy.soundMute : copy.soundUnmute}
-          onClick={() => commit({ ...store, sound: !store.sound })}
-        >
-          <VolumeMark on={store.sound} />
-        </button>
-        <button type="button" className="ghost" onClick={() => setMineOpen(true)}>
-          {copy.mine}
-        </button>
+      <div className="exhibition-ambient-spotlight" />
+      <div className="exhibition-grain" />
+
+      {/* Floating Museum Gallery Dock */}
+      <header className="gallery-dock">
+        <div className="dock-inner">
+          <a className="brand" href="#chon">
+            <BowlMark />
+            <span className="brand-copy">
+              <span className="brand-name">{copy.brand}</span>
+              <small className="brand-kicker">{copy.tag}</small>
+            </span>
+          </a>
+
+          <nav className="dock-actions">
+            <a className="dock-link" href="#kho">
+              <span className="dock-link-dot" />
+              {copy.stock}
+            </a>
+            <LangPick lang={store.lang} label={copy.language} onChange={setLang} />
+            <button
+              type="button"
+              className="icon-btn theme-toggle-btn"
+              id="btn-theme-toggle"
+              aria-pressed={resolvedTheme === 'dark'}
+              aria-label={resolvedTheme === 'dark' ? copy.themeLight : copy.themeDark}
+              title={copy.themeToggle}
+              onClick={() =>
+                commit({ ...store, ui: { theme: resolvedTheme === 'dark' ? 'light' : 'dark' } })
+              }
+            >
+              {resolvedTheme === 'dark' ? <SunMark /> : <MoonMark />}
+            </button>
+            <Donate label={copy.donate} hint={copy.donateHint} closeLabel={copy.close} />
+            <button
+              type="button"
+              className="icon-btn sound-toggle-btn"
+              aria-pressed={store.sound}
+              aria-label={store.sound ? copy.soundMute : copy.soundUnmute}
+              title={store.sound ? copy.soundMute : copy.soundUnmute}
+              onClick={() => commit({ ...store, sound: !store.sound })}
+            >
+              <VolumeMark on={store.sound} />
+            </button>
+            <button type="button" className="dock-pill-btn" onClick={() => setMineOpen(true)}>
+              {copy.mine}
+            </button>
+          </nav>
+        </div>
       </header>
 
-      <div className="mode-bar">
-        <p className="mode-bar-label">{copy.modes}</p>
-        <div className="mode-bar-row" role="group" aria-label={copy.modes}>
-          {THEMES.map((id) => (
-            <button
-              key={id}
-              type="button"
-              aria-pressed={store.mode === id}
-              className={store.mode === id ? 'on' : undefined}
-              onClick={() => setMode(id)}
-            >
-              <ThemeMark id={id} />
-              {THEME_I18N[id]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <main className="main">
-        <div className="page-head">
-          <h1>{mode.title}</h1>
-          <p>
-            {mode.opens}: {store.picks.toLocaleString(LANG_LOCALE[store.lang])}
-            {store.mode === 'duyen' ? ` · ${mode.collection}: ${store.seen.length}/${pool.length}` : ''}
-            {result && !busy
-              ? ` · ${copy.last}: ${dishName(result, store.lang)}`
-              : ` · ${copy.inStock}: ${eligible.length} ${copy.dishes}`}
-          </p>
-          {storageError ? (
-            <ErrorCard
-              title={copy.errorStorageTitle}
-              message={storageError}
-              closeLabel={copy.close}
-              onClose={() => setStorageError('')}
-            />
-          ) : null}
-        </div>
-
-        <section className="stage" id="chon" aria-live="polite">
-          <Scene
-            mode={store.mode}
-            busy={busy}
-            disabled={busy || empty || !customValid}
-            actLabel={busy ? mode.picking : result ? mode.again : mode.pick}
-            liveName={live && !busy ? dishName(live, store.lang) : ''}
-            slots={lots.map((dish, index) => ({
-              label: dish ? dishName(dish, store.lang) : String(index + 1),
-              open: lotsDealt && slot === index && !busy,
-              on: slot === index,
-            }))}
-            clockLine={mode.clock}
-            seenLabel={`${mode.collection} ${store.seen.length}/${pool.length}`}
-            onAct={pick}
-            onSlot={pickFromSlot}
-            onCollection={() => setAlbumOpen(true)}
-          />
-          <div className="stage-copy">
-            <p className="eyebrow">{mode.kicker}</p>
-            <p className={empty ? 'dish is-empty' : 'dish'}>{boardText}</p>
-            <p className="lede">{empty ? copy.hintEmpty : mode.lede}</p>
-          </div>
-          <ol className="steps">
-            <li>
-              <small>01</small> {copy.step1}
-            </li>
-            <li>
-              <small>02</small> {copy.step2}
-            </li>
-            <li>
-              <small>03</small> {copy.step3}
-            </li>
-          </ol>
-        </section>
-
-        <section className="controls">
-          <div className="course-row" role="group" aria-label={copy.meal}>
-            {(['chinh', 'vat', 'uong', 'nhau'] as Course[]).map((id) => (
+      {/* Central Kinetic Exhibition Chamber */}
+      <div className="exhibition-room">
+        {/* Plinth / Pedestal Section */}
+        <section className="exhibition-plinth" id="chon" aria-live="polite">
+          {/* Mode Switcher Integrated as Brass / Obsidian Recessed Keycaps */}
+          <div className="console-mode-bar" role="group" aria-label={copy.modes}>
+            {THEMES.map((id) => (
               <button
                 key={id}
                 type="button"
-                aria-pressed={store.filters.course === id}
-                className={store.filters.course === id ? 'on' : undefined}
-                disabled={busy}
-                onClick={() =>
-                  commit({
-                    ...store,
-                    filters: { ...store.filters, course: store.filters.course === id ? null : id },
-                  })
-                }
+                aria-pressed={store.mode === id}
+                className={store.mode === id ? 'console-mode-key is-active' : 'console-mode-key'}
+                onClick={() => setMode(id)}
               >
-                <CourseMark id={id} />
-                {COURSE_I18N[store.lang][id]}
+                <ThemeMark id={id} />
+                <span className="mode-label">{THEME_I18N[id]}</span>
+                <span className="key-pip" />
               </button>
             ))}
           </div>
-          <StampMany
-            label={copy.type}
-            large
-            options={TYPE_OPTIONS.map(([id]) => ({ id, label: typeLabel(id, store.lang) }))}
-            value={store.filters.types}
-            onToggle={(id: DishType) => {
-              if (busy) return
-              commit({ ...store, filters: { ...store.filters, types: toggle(store.filters.types, id) } })
-            }}
-          />
-          <div className={store.spendCustom ? 'open-row has-custom' : 'open-row'}>
-            <details className="place" ref={placeBox}>
-              <summary>{area.query ?? area.label}</summary>
-              <ul>
-                {AREAS.map((item) => (
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      className={item.id === area.id ? 'on' : undefined}
-                      onClick={() => {
-                        commit({ ...store, area: item.id })
-                        if (placeBox.current) placeBox.current.open = false
-                      }}
-                    >
-                      {item.query ?? item.label}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </details>
-            <label className="budget">
-              <span className="sr">{copy.budget}</span>
-              <Select
-                label={copy.budget}
-                value={budgetSelect}
-                disabled={busy}
-                options={[
-                  { id: '', label: copy.anyBudget },
-                  ...BUDGETS.map((n) => ({ id: String(n), label: `${n}k` })),
-                  { id: 'custom', label: copy.customBudget },
-                ]}
-                onChange={(value) => {
-                  if (value === 'custom') {
-                    const next = store.filters.budget ?? 50
-                    setSpendDraft(String(next))
+
+          {/* Exhibition Plaque Header */}
+          <div className="plinth-header">
+            <div className="plinth-header-lead">
+              <span className="plinth-badge">KINETIC ARTIFACT · NO. 0{THEMES.indexOf(store.mode) + 1}</span>
+              <h1 className="plinth-title">{mode.title}</h1>
+            </div>
+            <p className="plinth-stats">
+              <span className="stat-item">{mode.opens}: <strong>{store.picks.toLocaleString(LANG_LOCALE[store.lang])}</strong></span>
+              {store.mode === 'duyen' ? (
+                <span className="stat-item"> · {mode.collection}: <strong>{store.seen.length}/{pool.length}</strong></span>
+              ) : null}
+              {result && !busy ? (
+                <span className="stat-item"> · {copy.last}: <strong>{dishName(result, store.lang)}</strong></span>
+              ) : (
+                <span className="stat-item"> · {copy.inStock}: <strong>{eligible.length} {copy.dishes}</strong></span>
+              )}
+            </p>
+            {storageError ? (
+              <ErrorCard
+                title={copy.errorStorageTitle}
+                message={storageError}
+                closeLabel={copy.close}
+                onClose={() => setStorageError('')}
+              />
+            ) : null}
+          </div>
+
+          {/* Sân khấu cỗ máy trung tâm (The Interactive Machine) */}
+          <div className="kinetic-machine-housing">
+            <div className="machine-glass-reflection" />
+            <Scene
+              mode={store.mode}
+              busy={busy}
+              disabled={busy || empty || !customValid}
+              actLabel={busy ? mode.picking : result ? mode.again : mode.pick}
+              liveName={live && !busy ? dishName(live, store.lang) : ''}
+              slots={lots.map((dish, index) => ({
+                label: dish ? dishName(dish, store.lang) : String(index + 1),
+                open: lotsDealt && slot === index && !busy,
+                on: slot === index,
+              }))}
+              clockLine={mode.clock}
+              seenLabel={`${mode.collection} ${store.seen.length}/${pool.length}`}
+              onAct={pick}
+              onSlot={pickFromSlot}
+              onCollection={() => setAlbumOpen(true)}
+            />
+
+            {/* Stage Output & Display Screen */}
+            <div className="machine-display-pod">
+              <p className="display-kicker">{mode.kicker}</p>
+              <p className={empty ? 'display-dish is-empty' : 'display-dish'}>{boardText}</p>
+              <p className="display-lede">{empty ? copy.hintEmpty : mode.lede}</p>
+
+              {/* Central Physical Actuator Button */}
+              <button
+                type="button"
+                className="hero-actuator-btn"
+                onClick={pick}
+                disabled={busy || empty || !customValid}
+              >
+                <span className="actuator-ring" />
+                <span className="actuator-label">
+                  {busy
+                    ? mode.picking
+                    : store.mode === 'que'
+                      ? !lotsDealt
+                        ? mode.pick
+                        : slot == null
+                          ? mode.choose
+                          : mode.again
+                      : result
+                        ? mode.again
+                        : mode.pick}
+                </span>
+                <span className="actuator-specular" />
+              </button>
+            </div>
+          </div>
+
+          {/* Stepper sequence */}
+          <ol className="ceremonial-steps">
+            <li><span className="step-num">01</span> {copy.step1}</li>
+            <li><span className="step-num">02</span> {copy.step2}</li>
+            <li><span className="step-num">03</span> {copy.step3}</li>
+          </ol>
+        </section>
+
+        {/* Tactile Control Console (Bộ điều khiển cơ khí chìm) */}
+        <section className="tactile-console">
+          <div className="console-panel">
+            <div className="console-panel-header">
+              <span className="console-panel-title">THIẾT LẬP ĐIỀU KHIỂN CƠ HỌC</span>
+              <label className="console-veg-switch">
+                <input
+                  type="checkbox"
+                  checked={Boolean(store.filters.veg)}
+                  disabled={busy}
+                  onChange={() => commit({ ...store, filters: { ...store.filters, veg: !store.filters.veg } })}
+                />
+                <span className="switch-slider" />
+                <span className="switch-text">{copy.vegOnly}</span>
+              </label>
+            </div>
+
+            {/* Course Row - Bữa ăn */}
+            <div className="console-course-row" role="group" aria-label={copy.meal}>
+              {(['chinh', 'vat', 'uong', 'nhau'] as Course[]).map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={store.filters.course === id}
+                  className={store.filters.course === id ? 'console-course-btn on' : 'console-course-btn'}
+                  disabled={busy}
+                  onClick={() =>
                     commit({
                       ...store,
-                      spendCustom: true,
-                      filters: { ...store.filters, budget: next },
+                      filters: { ...store.filters, course: store.filters.course === id ? null : id },
                     })
-                    return
                   }
-                  commit({
-                    ...store,
-                    spendCustom: false,
-                    filters: {
-                      ...store.filters,
-                      budget: value ? Number(value) : null,
-                    },
-                  })
+                >
+                  <CourseMark id={id} />
+                  <span>{COURSE_I18N[store.lang][id]}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Loại món StampMany */}
+            <div className="console-field-block">
+              <StampMany
+                label={copy.type}
+                large
+                options={TYPE_OPTIONS.map(([id]) => ({ id, label: typeLabel(id, store.lang) }))}
+                value={store.filters.types}
+                onToggle={(id: DishType) => {
+                  if (busy) return
+                  commit({ ...store, filters: { ...store.filters, types: toggle(store.filters.types, id) } })
                 }}
               />
-            </label>
-            {store.spendCustom && (
-              <label className="budget">
-                <span className="sr">{copy.customSpend}</span>
-                <input
-                  className="budget-custom"
-                  inputMode="numeric"
+            </div>
+
+            {/* Open Row: Khu vực & Ngân sách */}
+            <div className={store.spendCustom ? 'console-open-row has-custom' : 'console-open-row'}>
+              <details className="place-selector-dial" ref={placeBox}>
+                <summary>{area.query ?? area.label}</summary>
+                <ul>
+                  {AREAS.map((item) => (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        className={item.id === area.id ? 'on' : undefined}
+                        onClick={() => {
+                          commit({ ...store, area: item.id })
+                          if (placeBox.current) placeBox.current.open = false
+                        }}
+                      >
+                        {item.query ?? item.label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+
+              <label className="budget-selector-dial">
+                <span className="sr">{copy.budget}</span>
+                <Select
+                  label={copy.budget}
+                  value={budgetSelect}
                   disabled={busy}
-                  value={spendDraft}
-                  aria-label={copy.customSpend}
-                  onChange={(event) => {
-                    const raw = event.target.value
-                    setSpendDraft(raw)
-                    const next = Number(raw)
-                    if (Number.isInteger(next) && next >= 30 && next <= 180) {
-                      commit({ ...store, spendCustom: true, filters: { ...store.filters, budget: next } })
+                  options={[
+                    { id: '', label: copy.anyBudget },
+                    ...BUDGETS.map((n) => ({ id: String(n), label: `${n}k` })),
+                    { id: 'custom', label: copy.customBudget },
+                  ]}
+                  onChange={(value) => {
+                    if (value === 'custom') {
+                      const next = store.filters.budget ?? 50
+                      setSpendDraft(String(next))
+                      commit({
+                        ...store,
+                        spendCustom: true,
+                        filters: { ...store.filters, budget: next },
+                      })
+                      return
                     }
+                    commit({
+                      ...store,
+                      spendCustom: false,
+                      filters: {
+                        ...store.filters,
+                        budget: value ? Number(value) : null,
+                      },
+                    })
                   }}
                 />
               </label>
-            )}
-            <button type="button" className="go" onClick={pick} disabled={busy || empty || !customValid}>
-              {busy
-                ? mode.picking
-                : store.mode === 'que'
-                  ? !lotsDealt
-                    ? mode.pick
-                    : slot == null
-                      ? mode.choose
-                      : mode.again
-                  : result
-                    ? mode.again
-                    : mode.pick}
-            </button>
-          </div>
-          {store.spendCustom && !customValid && <p className="spend-error">{copy.spendError}</p>}
-          <div className="toggle-row">
-            <label className="veg-toggle">
-              <input
-                type="checkbox"
-                checked={Boolean(store.filters.veg)}
-                disabled={busy}
-                onChange={() => commit({ ...store, filters: { ...store.filters, veg: !store.filters.veg } })}
+
+              {store.spendCustom && (
+                <label className="budget-custom-input">
+                  <span className="sr">{copy.customSpend}</span>
+                  <input
+                    inputMode="numeric"
+                    disabled={busy}
+                    value={spendDraft}
+                    aria-label={copy.customSpend}
+                    onChange={(event) => {
+                      const raw = event.target.value
+                      setSpendDraft(raw)
+                      const next = Number(raw)
+                      if (Number.isInteger(next) && next >= 30 && next <= 180) {
+                        commit({ ...store, spendCustom: true, filters: { ...store.filters, budget: next } })
+                      }
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+
+            {store.spendCustom && !customValid && <p className="spend-error">{copy.spendError}</p>}
+
+            {/* Xuất xứ & Vùng miền */}
+            <div className="console-control-row">
+              <StampMany
+                label={copy.cuisine}
+                options={CUISINE_OPTIONS.map(([id]) => ({ id, label: cuisineLabel(id, store.lang) }))}
+                value={store.filters.cuisines}
+                onToggle={(id: Cuisine) => {
+                  if (busy) return
+                  commit({
+                    ...store,
+                    filters: { ...store.filters, cuisines: toggle(store.filters.cuisines, id) },
+                  })
+                }}
               />
-              {copy.vegOnly}
-            </label>
-            <p className="hint">
+              <StampMany
+                label={copy.region}
+                options={REGION_OPTIONS.map(([id]) => ({ id, label: regionLabel(id, store.lang) }))}
+                value={store.filters.regions}
+                onToggle={(id: Region) => {
+                  if (busy) return
+                  commit({
+                    ...store,
+                    filters: { ...store.filters, regions: toggle(store.filters.regions, id) },
+                  })
+                }}
+              />
+            </div>
+
+            <p className="console-hint">
               {area.query ? `${copy.around} ${area.query}.` : copy.nearby}
               {eligible.length > 0 && Math.abs(mean - target) > 0.5
                 ? ` ${copy.meanHint}: ~${Math.round(mean)}k.`
                 : ''}
             </p>
           </div>
-          <div className="control-row">
-            <StampMany
-              label={copy.cuisine}
-              options={CUISINE_OPTIONS.map(([id]) => ({ id, label: cuisineLabel(id, store.lang) }))}
-              value={store.filters.cuisines}
-              onToggle={(id: Cuisine) => {
-                if (busy) return
-                commit({
-                  ...store,
-                  filters: { ...store.filters, cuisines: toggle(store.filters.cuisines, id) },
-                })
-              }}
-            />
-            <StampMany
-              label={copy.region}
-              options={REGION_OPTIONS.map(([id]) => ({ id, label: regionLabel(id, store.lang) }))}
-              value={store.filters.regions}
-              onToggle={(id: Region) => {
-                if (busy) return
-                commit({
-                  ...store,
-                  filters: { ...store.filters, regions: toggle(store.filters.regions, id) },
-                })
-              }}
-            />
-          </div>
         </section>
 
         {recent.length > 0 && (
-          <p className="history">
-            {copy.recent}:{' '}
-            {recent.map((dish) => (
-              <button key={dish.id} type="button" className="text-btn" onClick={() => pickOne(dish)}>
-                {dishName(dish, store.lang)}
-              </button>
-            ))}
-          </p>
+          <div className="history-drawer">
+            <span className="history-label">{copy.recent}:</span>
+            <div className="history-pills">
+              {recent.map((dish) => (
+                <button key={dish.id} type="button" className="history-pill" onClick={() => pickOne(dish)}>
+                  {dishName(dish, store.lang)}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
+      </div>
 
-        <section className="catalog" id="kho">
-          <div className="catalog-heading">
-            <h2>{mode.catalog}</h2>
-            <label className="search">
+      {/* Museum Archive Drawer (Kho Lưu Trữ Ẩm Thực) */}
+      <section className="museum-archive" id="kho">
+        <div className="archive-inner">
+          <div className="archive-heading">
+            <div className="archive-title-group">
+              <span className="archive-badge">MUSEUM COLLECTION</span>
+              <h2>{mode.catalog}</h2>
+            </div>
+            <label className="archive-search">
               <span className="sr">{copy.search}</span>
               <input
                 value={query}
@@ -661,6 +767,7 @@ export function App() {
               />
             </label>
           </div>
+
           <div className="catalog-grid">
             {listed.map((dish) => (
               <Card
@@ -672,14 +779,16 @@ export function App() {
               />
             ))}
           </div>
+
           {inventory.length > 24 && (
-            <button type="button" className="more" onClick={() => setMore((value) => !value)}>
+            <button type="button" className="archive-more-btn" onClick={() => setMore((value) => !value)}>
               {more ? copy.less : copy.more}
             </button>
           )}
-        </section>
-      </main>
+        </div>
+      </section>
 
+      {/* Footer */}
       <footer className="foot">
         <span>{copy.brand}</span>
         <a className="foot-mail" href="mailto:nhmanh.dev@gmail.com">
@@ -687,6 +796,7 @@ export function App() {
         </a>
       </footer>
 
+      {/* Winner Ceremonial Plaque */}
       {reveal && result && (
         <div className="winner-back" onClick={() => setReveal(false)}>
           <div
@@ -696,6 +806,7 @@ export function App() {
             aria-labelledby="winner-title"
             onClick={(event) => event.stopPropagation()}
           >
+            <div className="winner-gilded-rim" />
             <p className="eyebrow">{mode.kicker}</p>
             <h2 id="winner-title">{dishName(result, store.lang)}</h2>
             <p className="winner-price">
@@ -748,10 +859,11 @@ export function App() {
               >
                 {copied ? copy.copied : copy.copyResult}
               </button>
-              <button type="button" className="ghost" onClick={() => setReveal(false)}>
-                {copy.continue}
+              <button type="button" className="secondary" onClick={() => setReveal(false)}>
+                {copy.close}
               </button>
             </div>
+            {copied && <p className="winner-feedback">{copy.copied}</p>}
             {copyError ? (
               <ErrorCard
                 title={copy.errorCopyTitle}
@@ -810,44 +922,12 @@ export function App() {
         onClose={() => setMineOpen(false)}
         disabled={store.disabled}
         custom={store.custom}
-        onToggleBuiltin={(id) => {
-          const next = toggle(store.disabled, id)
-          const remain = eligibleDishes(pool, next, { types: [], cuisines: [], regions: [] })
-          if (remain.length === 0) return
-          commit({ ...store, disabled: next, lastId: store.lastId === id ? null : store.lastId })
-        }}
-        onEnableAll={() => commit({ ...store, disabled: [] })}
-        onClearSaved={() =>
-          commit({
-            ...store,
-            custom: [],
-            disabled: [],
-            lastId: store.lastId && CATALOG.some((dish) => dish.id === store.lastId) ? store.lastId : null,
-            recent: store.recent.filter((id) => CATALOG.some((dish) => dish.id === id)),
-          })
-        }
-        onAddCustom={(dish) => commit({ ...store, custom: [...store.custom, dish] })}
-        onUpdateCustom={(dish) =>
-          commit({
-            ...store,
-            custom: store.custom.map((item) => (item.id === dish.id ? dish : item)),
-          })
-        }
-        onRemoveCustom={(id) => {
-          const nextCustom = store.custom.filter((dish) => dish.id !== id)
-          const remain = eligibleDishes([...CATALOG, ...nextCustom], store.disabled, {
-            types: [],
-            cuisines: [],
-            regions: [],
-          })
-          if (remain.length === 0) return
-          commit({
-            ...store,
-            custom: nextCustom,
-            lastId: store.lastId === id ? null : store.lastId,
-            recent: store.recent.filter((item) => item !== id),
-          })
-        }}
+        onToggleBuiltin={toggleBuiltin}
+        onEnableAll={enableAll}
+        onClearSaved={clearSaved}
+        onAddCustom={addCustom}
+        onUpdateCustom={updateCustom}
+        onRemoveCustom={removeCustom}
       />
     </div>
   )

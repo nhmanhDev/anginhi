@@ -844,7 +844,7 @@ export function App() {
       <LandingCta lang={store.lang} onPickNow={pick} />
 
       {/* Footer */}
-      <Footer brand={copy.brand} />
+      <Footer brand={copy.brand} lang={store.lang} onOpenMine={() => setMineOpen(true)} />
 
       {/* Winner Ceremonial Plaque */}
       {reveal && result && (

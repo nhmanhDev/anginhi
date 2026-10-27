@@ -1,5 +1,5 @@
 import { money, t } from './copy.ts'
-import { cuisineLabel, regionLabel, typeLabel } from './labels.ts'
+import { COURSE_LABELS, cuisineLabel, regionLabel, typeLabel } from './labels.ts'
 import { dishName } from './names.ts'
 import type { Dish, Lang } from './types.ts'
 
@@ -14,10 +14,35 @@ export function Card({ dish, lang, onPick, onHide }: Props) {
   const copy = t(lang)
   const isVi = lang === 'vi'
 
+  // Tạo chuỗi mô tả xuất xứ & bữa ăn thật sự có ý nghĩa
+  const originParts: string[] = []
+  if (dish.cuisine === 'viet') {
+    if (dish.region) {
+      originParts.push(`Món ${regionLabel(dish.region, lang)}`)
+    } else {
+      originParts.push('Việt Nam')
+    }
+  } else {
+    originParts.push(cuisineLabel(dish.cuisine, lang))
+  }
+  originParts.push(COURSE_LABELS[dish.course] || (isVi ? 'Bữa chính' : 'Main course'))
+
   return (
-    <article className="food-card group">
-      {/* Khung ảnh món ăn với tỉ lệ 4:3 và hiệu ứng zoom mượt */}
-      <div className="food-card-media" onClick={() => onPick(dish)}>
+    <article
+      className="food-card group"
+      onClick={() => onPick(dish)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onPick(dish)
+        }
+      }}
+      aria-label={`${dishName(dish, lang)} - ${money(dish.price, lang)}`}
+    >
+      {/* Khung ảnh món ăn tỉ lệ 4:3 với gradient và badges tinh xảo */}
+      <div className="food-card-media">
         {dish.image ? (
           <img
             src={dish.image}
@@ -43,7 +68,7 @@ export function Card({ dish, lang, onPick, onHide }: Props) {
           )}
         </div>
 
-        {/* Nút Ẩn món dạng nút tròn kính mờ ở góc trên bên phải */}
+        {/* Nút Ẩn món (hiện rõ nét hơn khi hover card) */}
         {onHide && (
           <button
             type="button"
@@ -62,18 +87,19 @@ export function Card({ dish, lang, onPick, onHide }: Props) {
           </button>
         )}
 
-        {/* Tag vùng miền nổi ở đáy ảnh */}
-        {dish.region && (
-          <span className="food-region-tag">
-            {regionLabel(dish.region, lang)}
-          </span>
-        )}
+        {/* Nhãn xem quán trượt lên khi hover */}
+        <div className="food-hover-prompt">
+          <span>{isVi ? 'Nhấn để tìm quán gần đây' : 'Click to find spots'}</span>
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" className="prompt-arrow">
+            <path d="M4 12l8-8M6 4h6v6" />
+          </svg>
+        </div>
       </div>
 
-      {/* Thân thẻ thông tin chi tiết */}
+      {/* Thân thẻ thông tin tối giản, sắc sảo */}
       <div className="food-card-body">
         <div className="food-card-header-row">
-          <h3 className="food-title" onClick={() => onPick(dish)}>
+          <h3 className="food-title">
             {dishName(dish, lang)}
           </h3>
           <span className="food-price-tag">
@@ -82,27 +108,7 @@ export function Card({ dish, lang, onPick, onHide }: Props) {
         </div>
 
         <div className="food-card-subinfo">
-          <span className="food-cuisine-label">
-            {cuisineLabel(dish.cuisine, lang)}
-          </span>
-          <span className="food-dot-sep">·</span>
-          <span className="food-meta-sub">
-            {isVi ? 'Bữa chính nhanh gọn' : 'Classic meal'}
-          </span>
-        </div>
-
-        {/* Nút hành động nhanh ở chân thẻ */}
-        <div className="food-card-actions">
-          <button
-            type="button"
-            className="food-action-pick-btn"
-            onClick={() => onPick(dish)}
-          >
-            <span>{isVi ? 'Xem & tìm quán' : 'Find spots'}</span>
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3">
-              <path d="M3 8h10M9 4l4 4-4 4" />
-            </svg>
-          </button>
+          <span>{originParts.join(' · ')}</span>
         </div>
       </div>
     </article>

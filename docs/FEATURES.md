@@ -6,15 +6,9 @@ Góc nhìn người dùng. Chi tiết code: [ARCHITECTURE.md](ARCHITECTURE.md).
 
 Lọc kho món, rút một lần, rồi mở Google Maps / Grab / ShopeeFood để tìm quán gần khu vực đã chọn.
 
-## Năm cách chọn
+## Cách chọn
 
-| Cách | Việc xảy ra |
-|---|---|
-| Quẻ trưa | Chia năm ô, lật một ô |
-| Két hội thợ lùn | Mở két, một món bước ra |
-| Khui vị | Khui hũ một lần |
-| Duyên vị | Gặp món chưa gặp, ghi vào album |
-| Hội mèo | Nghỉ một nhịp rồi chọn hộ |
+Một lối: Quẻ trưa. Chia năm ô, ưu tiên món chưa gặp. Lật một ô thì khui ra món. Hết món mới thì chia lại cả kho. Dòng "Đã gặp" mở album những món đã lật.
 
 ## Lọc
 

@@ -35,7 +35,7 @@
 <table>
 <tr>
   <td align="center" width="25%"><h3>Lọc món</h3><p>Loại, xuất xứ, vùng, suất, chay, ngân sách</p></td>
-  <td align="center" width="25%"><h3>Năm cách chọn</h3><p>Quẻ, két, khui, duyên, hội mèo</p></td>
+  <td align="center" width="25%"><h3>Quẻ trưa</h3><p>Chia năm ô, lật một ô, khui ra món</p></td>
   <td align="center" width="25%"><h3>Tìm quán</h3><p>Maps, Grab, ShopeeFood theo khu vực</p></td>
   <td align="center" width="25%"><h3>Món của tôi</h3><p>Ẩn món sẵn, thêm món của mình trên trình duyệt</p></td>
 </tr>

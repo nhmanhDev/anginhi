@@ -3,12 +3,13 @@ import { AREAS } from './areas.ts'
 import { Card } from './Card.tsx'
 import { CATALOG } from './catalog.ts'
 import { StampMany } from './Chips.tsx'
-import { COURSE_I18N, LANG_LOCALE, LANG_OPTIONS, THEME_I18N, THEMES, money, t } from './copy.ts'
+import { COURSE_I18N, LANG_LOCALE, LANG_OPTIONS, money, t } from './copy.ts'
 import { modeText } from './modes.ts'
 import { Donate } from './Donate.tsx'
+import { Footer } from './Footer.tsx'
 import { ErrorCard } from './ErrorCard.tsx'
 import { eligibleDishes } from './filter.ts'
-import { BowlMark, ChevronMark, CourseMark, GlobeMark, MoonMark, SunMark, ThemeMark, VolumeMark } from './icons.tsx'
+import { BowlMark, ChevronMark, CourseMark, GlobeMark, MoonMark, SunMark, VolumeMark } from './icons.tsx'
 import {
   BUDGETS,
   CUISINE_OPTIONS,
@@ -22,12 +23,17 @@ import { grabSearchUrl, mapsSearchUrl, shopeeSearchUrl } from './maps.ts'
 import { dishName } from './names.ts'
 import { MyDishes } from './MyDishes.tsx'
 import { Select } from './Select.tsx'
-import { fillSlots, pickUnseen, pickWeighted, weightedMean } from './pick.ts'
+import { MagnetButton, Tilt } from './motion.tsx'
+import { fillSlots, weightedMean } from './pick.ts'
 import { Scene } from './Scene.tsx'
+import { LandingHeroMockups } from './LandingHeroMockups.tsx'
+import { LandingFeatures } from './LandingFeatures.tsx'
+import { LandingSteps } from './LandingSteps.tsx'
+import { LandingCta } from './LandingCta.tsx'
 import { playPick, playReveal } from './sound.ts'
 import { emptyStore, parseStore, STORAGE_KEY, writeStore, type Store } from './store.ts'
 import { resolveTheme } from './theme.ts'
-import type { Course, Cuisine, Dish, DishType, Lang, Region, ThemeId } from './types.ts'
+import type { Course, Cuisine, Dish, DishType, Lang, Region } from './types.ts'
 
 function loadStore(): Store {
   try {
@@ -80,10 +86,10 @@ function LangPick({
   }, [open])
 
   return (
-    <div className="lang-pick" ref={box}>
+    <div className="lang-select-wrap lang-pick" ref={box}>
       <button
         type="button"
-        className="lang-trigger"
+        className={open ? 'lang-btn lang-trigger is-open' : 'lang-btn lang-trigger'}
         aria-label={label}
         aria-expanded={open}
         aria-haspopup="listbox"
@@ -101,12 +107,18 @@ function LangPick({
                 type="button"
                 role="option"
                 aria-selected={item.id === lang}
+                className={item.id === lang ? 'lang-option is-selected' : 'lang-option'}
                 onClick={() => {
                   onChange(item.id)
                   setOpen(false)
                 }}
               >
-                {item.label}
+                <span>{item.label}</span>
+                {item.id === lang ? (
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="menu-check">
+                    <path d="M3.5 8.5L6.5 11.5L12.5 4.5" />
+                  </svg>
+                ) : null}
               </button>
             </li>
           ))}
@@ -133,9 +145,7 @@ export function App() {
   const [lots, setLots] = useState<(Dish | null)[]>(emptyLots)
   const [lotsDealt, setLotsDealt] = useState(false)
   const [albumOpen, setAlbumOpen] = useState(false)
-  const placeBox = useRef<HTMLDetailsElement>(null)
   const cancel = useRef(0)
-  const think = useRef(0)
   const copy = t(store.lang)
   const mode = modeText(store.mode, store.lang)
   const resolvedTheme = resolveTheme(store.ui.theme, prefersDark)
@@ -154,11 +164,12 @@ export function App() {
     return q ? rows.filter((dish) => dish.name.toLocaleLowerCase('vi').includes(q)) : rows
   }, [eligible, query])
   const live = busy ? shown : result
+  const seenCount = store.seen.filter((id) => pool.some((dish) => dish.id === id)).length
   const boardText = empty
     ? copy.empty
-    : busy && !shown
+    : busy
       ? mode.picking
-      : store.mode === 'que' && lotsDealt && slot == null
+      : lotsDealt && slot == null
         ? mode.dealt
         : live
           ? dishName(live, store.lang)
@@ -189,25 +200,12 @@ export function App() {
     document.documentElement.dataset.theme = resolvedTheme
     document.title = copy.brand
     const meta = document.querySelector('meta[name="theme-color"]')
-    if (meta) meta.setAttribute('content', resolvedTheme === 'dark' ? '#0f141c' : '#f2f0e7')
+    if (meta) meta.setAttribute('content', resolvedTheme === 'dark' ? '#1c212b' : '#f4f6f8')
   }, [store.lang, resolvedTheme, copy.brand])
 
   useEffect(() => {
-    const raw = new URLSearchParams(window.location.search).get('mode')
-    if (!raw || !THEMES.includes(raw as ThemeId)) return
-    setStore((current) => {
-      if (current.mode === raw) return current
-      const next = { ...current, mode: raw as ThemeId }
-      writeStore(next, localStorage)
-      return next
-    })
-  }, [])
-
-  useEffect(() => {
-    return () => {
-      cancelAnimationFrame(cancel.current)
-      window.clearTimeout(think.current)
-    }
+    document.getElementById('boot-loader')?.classList.add('boot-loader-hidden')
+    return () => cancelAnimationFrame(cancel.current)
   }, [])
 
   const eligibleKey = eligible.map((dish) => dish.id).join(',')
@@ -215,7 +213,7 @@ export function App() {
     setLots(emptyLots())
     setLotsDealt(false)
     setSlot(null)
-  }, [eligibleKey, store.mode])
+  }, [eligibleKey])
 
   function commit(next: Store) {
     setStore(next)
@@ -226,6 +224,8 @@ export function App() {
   function finishPick(winner: Dish) {
     setShown(winner)
     setBusy(false)
+    setCopied(false)
+    setCopyError(false)
     setReveal(true)
     if (store.sound) playReveal()
     const recent = [winner.id, ...store.recent.filter((id) => id !== winner.id)].slice(0, 8)
@@ -258,29 +258,16 @@ export function App() {
   }
 
   function beginShuffle(winner: Dish, list: Dish[]) {
-    window.clearTimeout(think.current)
     setBusy(true)
     setReveal(false)
-    if (store.mode === 'meo' && !prefersReducedMotion() && list.length > 1) {
-      setShown(null)
-      think.current = window.setTimeout(() => shuffleDishes(winner, list), 700)
-      return
-    }
     setShown(list.find((dish) => dish.id !== winner.id) ?? winner)
     shuffleDishes(winner, list)
-  }
-
-  function runPick(unseen = false) {
-    if (busy || empty || !customValid) return
-    if (store.sound) playPick()
-    const winner = unseen ? pickUnseen(eligible, store.seen, target) : pickWeighted(eligible, target)
-    beginShuffle(winner, eligible)
   }
 
   function dealLots() {
     if (busy || empty || !customValid) return
     if (store.sound) playPick()
-    setLots(fillSlots(eligible, 5))
+    setLots(fillSlots(eligible, 5, Math.random, store.seen))
     setLotsDealt(true)
     setSlot(null)
     setShown(null)
@@ -300,25 +287,21 @@ export function App() {
 
   function pick() {
     if (busy || empty || !customValid) return
-    if (store.mode === 'que') {
-      if (!lotsDealt) {
-        dealLots()
-        return
-      }
-      if (slot == null) {
-        revealLot(Math.floor(Math.random() * 5))
-        return
-      }
+    if (!lotsDealt) {
       dealLots()
       return
     }
-    runPick(store.mode === 'duyen')
+    if (slot == null) {
+      revealLot(Math.floor(Math.random() * 5))
+      return
+    }
+    dealLots()
   }
 
   function pickFromSlot(index: number) {
     if (busy || empty || !customValid) return
     if (!lotsDealt) {
-      const dealt = fillSlots(eligible, 5)
+      const dealt = fillSlots(eligible, 5, Math.random, store.seen)
       setLots(dealt)
       setLotsDealt(true)
       revealLot(index, dealt)
@@ -326,17 +309,6 @@ export function App() {
     }
     if (slot != null) return
     revealLot(index)
-  }
-
-  function setMode(id: ThemeId) {
-    setSlot(null)
-    setLots(emptyLots())
-    setLotsDealt(false)
-    setAlbumOpen(false)
-    commit({ ...store, mode: id })
-    const url = new URL(window.location.href)
-    url.searchParams.set('mode', id)
-    window.history.replaceState(null, '', url)
   }
 
   function pickOne(dish: Dish) {
@@ -410,7 +382,7 @@ export function App() {
       <div className="exhibition-ambient-spotlight" />
       <div className="exhibition-grain" />
 
-      {/* Floating Museum Gallery Dock */}
+      {/* Floating Capsule Dock */}
       <header className="gallery-dock">
         <div className="dock-inner">
           <a className="brand" href="#chon">
@@ -421,11 +393,25 @@ export function App() {
             </span>
           </a>
 
-          <nav className="dock-actions">
-            <a className="dock-link" href="#kho">
-              <span className="dock-link-dot" />
+          <nav className="dock-nav-links">
+            <a className="dock-nav-item" href="#chon">
+              {mode.title}
+            </a>
+            <a className="dock-nav-item" href="#tinh-nang">
+              {copy.featuresTitle}
+            </a>
+            <a className="dock-nav-item" href="#bo-loc">
+              {copy.step1}
+            </a>
+            <a className="dock-nav-item" href="#quy-trinh">
+              {store.lang === 'vi' ? 'Quy trình' : 'Steps'}
+            </a>
+            <a className="dock-nav-item" href="#kho">
               {copy.stock}
             </a>
+          </nav>
+
+          <nav className="dock-actions">
             <LangPick lang={store.lang} label={copy.language} onChange={setLang} />
             <button
               type="button"
@@ -458,120 +444,162 @@ export function App() {
         </div>
       </header>
 
-      {/* Central Kinetic Exhibition Chamber */}
       <div className="exhibition-room">
-        {/* Plinth / Pedestal Section */}
-        <section className="exhibition-plinth" id="chon" aria-live="polite">
-          {/* Mode Switcher Integrated as Brass / Obsidian Recessed Keycaps */}
-          <div className="console-mode-bar" role="group" aria-label={copy.modes}>
-            {THEMES.map((id) => (
-              <button
-                key={id}
-                type="button"
-                aria-pressed={store.mode === id}
-                className={store.mode === id ? 'console-mode-key is-active' : 'console-mode-key'}
-                onClick={() => setMode(id)}
-              >
-                <ThemeMark id={id} />
-                <span className="mode-label">{THEME_I18N[id]}</span>
-                <span className="key-pip" />
-              </button>
-            ))}
-          </div>
-
-          {/* Exhibition Plaque Header */}
-          <div className="plinth-header">
-            <div className="plinth-header-lead">
-              <span className="plinth-badge">KINETIC ARTIFACT · NO. 0{THEMES.indexOf(store.mode) + 1}</span>
-              <h1 className="plinth-title">{mode.title}</h1>
-            </div>
-            <p className="plinth-stats">
-              <span className="stat-item">{mode.opens}: <strong>{store.picks.toLocaleString(LANG_LOCALE[store.lang])}</strong></span>
-              {store.mode === 'duyen' ? (
-                <span className="stat-item"> · {mode.collection}: <strong>{store.seen.length}/{pool.length}</strong></span>
-              ) : null}
-              {result && !busy ? (
-                <span className="stat-item"> · {copy.last}: <strong>{dishName(result, store.lang)}</strong></span>
+        <section className="hero-landing-section" id="chon" aria-live="polite">
+          <div className="hero-copy-block">
+            <h1 className="hero-main-title">
+              {store.lang === 'vi' ? (
+                <>
+                  Hôm nay ăn gì?{' '}
+                  <span className="hero-shimmer-wrapper">
+                    <span className="hero-shimmer-text">để quẻ trưa quyết.</span>
+                    <svg aria-hidden="true" viewBox="0 0 64 60" fill="none" className="hero-doodle-spark">
+                      <path
+                        d="M32 52 C 22 44, 7 35, 6 21 C 5 11, 14 6, 21 9 C 26 11, 30 16, 32 20 C 34 15, 39 10, 45 9 C 52 8, 59 13, 58 22 C 56 36, 41 45, 32 52 Z"
+                        stroke="currentColor"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+                </>
               ) : (
-                <span className="stat-item"> · {copy.inStock}: <strong>{eligible.length} {copy.dishes}</strong></span>
+                <>
+                  What to eat today?{' '}
+                  <span className="hero-shimmer-wrapper">
+                    <span className="hero-shimmer-text">let fortune decide.</span>
+                    <svg aria-hidden="true" viewBox="0 0 64 60" fill="none" className="hero-doodle-spark">
+                      <path
+                        d="M32 52 C 22 44, 7 35, 6 21 C 5 11, 14 6, 21 9 C 26 11, 30 16, 32 20 C 34 15, 39 10, 45 9 C 52 8, 59 13, 58 22 C 56 36, 41 45, 32 52 Z"
+                        stroke="currentColor"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+                </>
               )}
-            </p>
-            {storageError ? (
-              <ErrorCard
-                title={copy.errorStorageTitle}
-                message={storageError}
-                closeLabel={copy.close}
-                onClose={() => setStorageError('')}
-              />
-            ) : null}
+            </h1>
+            <p className="hero-sub-lede">{empty ? copy.hintEmpty : mode.lede}</p>
           </div>
 
-          {/* Sân khấu cỗ máy trung tâm (The Interactive Machine) */}
-          <div className="kinetic-machine-housing">
-            <div className="machine-glass-reflection" />
-            <Scene
-              mode={store.mode}
-              busy={busy}
-              disabled={busy || empty || !customValid}
-              actLabel={busy ? mode.picking : result ? mode.again : mode.pick}
-              liveName={live && !busy ? dishName(live, store.lang) : ''}
-              slots={lots.map((dish, index) => ({
-                label: dish ? dishName(dish, store.lang) : String(index + 1),
-                open: lotsDealt && slot === index && !busy,
-                on: slot === index,
-              }))}
-              clockLine={mode.clock}
-              seenLabel={`${mode.collection} ${store.seen.length}/${pool.length}`}
-              onAct={pick}
-              onSlot={pickFromSlot}
-              onCollection={() => setAlbumOpen(true)}
+          {storageError ? (
+            <ErrorCard
+              title={copy.errorStorageTitle}
+              message={storageError}
+              closeLabel={copy.close}
+              onClose={() => setStorageError('')}
+            />
+          ) : null}
+
+          {/* Central Product Showcase Stage (Surrounded by tilted floating cards) */}
+          <div className="hero-stage-container">
+            <div className="hero-ambient-glow" aria-hidden="true" />
+
+            <LandingHeroMockups
+              lang={store.lang}
+              areaQuery={area.query ?? area.label}
+              onPickThisOrThat={(dishTitle) => {
+                const found = pool.find((d) => d.name === dishTitle)
+                if (found) pickOne(found)
+              }}
             />
 
-            {/* Stage Output & Display Screen */}
-            <div className="machine-display-pod">
-              <p className="display-kicker">{mode.kicker}</p>
-              <p className={empty ? 'display-dish is-empty' : 'display-dish'}>{boardText}</p>
-              <p className="display-lede">{empty ? copy.hintEmpty : mode.lede}</p>
+            <div className="hero-board-card">
+              <div className="board-card-header">
+                <div className="board-title-group">
+                  <p className="board-card-title">{mode.title}</p>
+                  <p className="board-card-badge">
+                    <span className="status-live-dot" />
+                    <span>
+                      {eligible.length} {copy.dishes} {copy.inStock}
+                    </span>
+                  </p>
+                </div>
+                <div className="board-header-actions">
+                  <button
+                    type="button"
+                    className="board-sound-pill"
+                    onClick={() => commit({ ...store, sound: !store.sound })}
+                    title={store.sound ? copy.soundMute : copy.soundUnmute}
+                  >
+                    <VolumeMark on={store.sound} />
+                    <span>
+                      {store.sound
+                        ? store.lang === 'vi'
+                          ? 'Bật âm'
+                          : 'Sound ON'
+                        : store.lang === 'vi'
+                          ? 'Tắt âm'
+                          : 'Muted'}
+                    </span>
+                  </button>
+                </div>
+              </div>
 
-              {/* Central Physical Actuator Button */}
-              <button
-                type="button"
-                className="hero-actuator-btn"
-                onClick={pick}
-                disabled={busy || empty || !customValid}
-              >
-                <span className="actuator-ring" />
-                <span className="actuator-label">
-                  {busy
-                    ? mode.picking
-                    : store.mode === 'que'
-                      ? !lotsDealt
-                        ? mode.pick
-                        : slot == null
-                          ? mode.choose
-                          : mode.again
-                      : result
-                        ? mode.again
-                        : mode.pick}
-                </span>
-                <span className="actuator-specular" />
-              </button>
+              <div className="board-display-zone">
+                <p className={empty ? 'board is-empty' : 'board'}>{boardText}</p>
+                <Scene
+                  busy={busy}
+                  disabled={busy || empty || !customValid}
+                  slots={lots.map((dish, index) => ({
+                    label: dish ? dishName(dish, store.lang) : String(index + 1),
+                    open: lotsDealt && slot === index && !busy,
+                    on: slot === index,
+                  }))}
+                  onSlot={pickFromSlot}
+                />
+              </div>
+
+              <div className="board-card-phases">
+                <div className="phases-pill-track">
+                  <span className={!lotsDealt ? 'phase-step active' : 'phase-step'}>
+                    1. {copy.step1}
+                  </span>
+                  <span className={lotsDealt && slot == null ? 'phase-step active' : 'phase-step'}>
+                    2. {copy.step2}
+                  </span>
+                  <span className={slot != null ? 'phase-step active' : 'phase-step'}>
+                    3. {copy.step3}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Stepper sequence */}
-          <ol className="ceremonial-steps">
-            <li><span className="step-num">01</span> {copy.step1}</li>
-            <li><span className="step-num">02</span> {copy.step2}</li>
-            <li><span className="step-num">03</span> {copy.step3}</li>
-          </ol>
+          <div className="hero-cta-group">
+            <MagnetButton className="cta hero-main-cta" onClick={pick} disabled={busy || empty || !customValid}>
+              {busy ? mode.picking : !lotsDealt ? mode.pick : slot == null ? mode.choose : mode.again}
+            </MagnetButton>
+            <a href="#kho" className="hero-secondary-btn">
+              <span className="pulse-dot-green" />
+              <span>{copy.stock} ({eligible.length})</span>
+            </a>
+          </div>
+
+          <div className="hero-microcopy">
+            <button type="button" className="seen-pill" onClick={() => setAlbumOpen(true)}>
+              {mode.collection} {seenCount}/{pool.length}
+            </button>
+            <span className="micro-divider">·</span>
+            <span>
+              {mode.opens} <strong>{store.picks.toLocaleString(LANG_LOCALE[store.lang])}</strong>
+            </span>
+            <span className="micro-divider">·</span>
+            <span>{store.lang === 'vi' ? 'Lưu trên trình duyệt này' : 'Saved on this browser'}</span>
+          </div>
         </section>
 
+        {/* 5-Column Bento Features Grid */}
+        <LandingFeatures lang={store.lang} />
+
         {/* Tactile Control Console (Bộ điều khiển cơ khí chìm) */}
-        <section className="tactile-console">
+        <section className="tactile-console" id="bo-loc">
           <div className="console-panel">
             <div className="console-panel-header">
-              <span className="console-panel-title">THIẾT LẬP ĐIỀU KHIỂN CƠ HỌC</span>
+              <span className="console-panel-title">{copy.step1}</span>
               <label className="console-veg-switch">
                 <input
                   type="checkbox"
@@ -622,27 +650,18 @@ export function App() {
 
             {/* Open Row: Khu vực & Ngân sách */}
             <div className={store.spendCustom ? 'console-open-row has-custom' : 'console-open-row'}>
-              <details className="place-selector-dial" ref={placeBox}>
-                <summary>{area.query ?? area.label}</summary>
-                <ul>
-                  {AREAS.map((item) => (
-                    <li key={item.id}>
-                      <button
-                        type="button"
-                        className={item.id === area.id ? 'on' : undefined}
-                        onClick={() => {
-                          commit({ ...store, area: item.id })
-                          if (placeBox.current) placeBox.current.open = false
-                        }}
-                      >
-                        {item.query ?? item.label}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </details>
+              <div className="place-selector-dial">
+                <span className="sr">{copy.around}</span>
+                <Select
+                  label={copy.around}
+                  value={store.area}
+                  disabled={busy}
+                  options={AREAS.map((item) => ({ id: item.id, label: item.query ?? item.label }))}
+                  onChange={(id) => commit({ ...store, area: id })}
+                />
+              </div>
 
-              <label className="budget-selector-dial">
+              <div className="budget-selector-dial">
                 <span className="sr">{copy.budget}</span>
                 <Select
                   label={copy.budget}
@@ -674,13 +693,16 @@ export function App() {
                     })
                   }}
                 />
-              </label>
+              </div>
 
               {store.spendCustom && (
                 <label className="budget-custom-input">
                   <span className="sr">{copy.customSpend}</span>
                   <input
                     inputMode="numeric"
+                    spellCheck={false}
+                    autoCorrect="off"
+                    autoCapitalize="off"
                     disabled={busy}
                     value={spendDraft}
                     aria-label={copy.customSpend}
@@ -748,6 +770,9 @@ export function App() {
             </div>
           </div>
         )}
+
+        {/* 4-Step Process Flow with Curved SVG Arrows */}
+        <LandingSteps lang={store.lang} />
       </div>
 
       {/* Museum Archive Drawer (Kho Lưu Trữ Ẩm Thực) */}
@@ -755,13 +780,15 @@ export function App() {
         <div className="archive-inner">
           <div className="archive-heading">
             <div className="archive-title-group">
-              <span className="archive-badge">MUSEUM COLLECTION</span>
               <h2>{mode.catalog}</h2>
             </div>
             <label className="archive-search">
               <span className="sr">{copy.search}</span>
               <input
                 value={query}
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="off"
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={copy.search}
               />
@@ -788,17 +815,23 @@ export function App() {
         </div>
       </section>
 
+      {/* Final Landing CTA Banner */}
+      <LandingCta lang={store.lang} onPickNow={pick} />
+
       {/* Footer */}
-      <footer className="foot">
-        <span>{copy.brand}</span>
-        <a className="foot-mail" href="mailto:nhmanh.dev@gmail.com">
-          nhmanh.dev@gmail.com
-        </a>
-      </footer>
+      <Footer brand={copy.brand} />
 
       {/* Winner Ceremonial Plaque */}
       {reveal && result && (
-        <div className="winner-back" onClick={() => setReveal(false)}>
+        <div
+          className="winner-back"
+          onClick={() => {
+            setReveal(false)
+            setCopied(false)
+            setCopyError(false)
+          }}
+        >
+          <Tilt className="winner-tilt">
           <div
             className="winner"
             role="dialog"
@@ -859,7 +892,15 @@ export function App() {
               >
                 {copied ? copy.copied : copy.copyResult}
               </button>
-              <button type="button" className="secondary" onClick={() => setReveal(false)}>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => {
+                  setReveal(false)
+                  setCopied(false)
+                  setCopyError(false)
+                }}
+              >
                 {copy.close}
               </button>
             </div>
@@ -873,6 +914,7 @@ export function App() {
               />
             ) : null}
           </div>
+          </Tilt>
         </div>
       )}
 

@@ -157,17 +157,13 @@ function pickBudget(filters: unknown): number | null {
 }
 
 const LANGS: Lang[] = ['vi', 'en', 'zh', 'ko', 'ja', 'hi']
-const THEMES: ThemeId[] = ['ket', 'duyen', 'khui', 'que', 'meo']
 
 function pickLang(raw: unknown): Lang {
   return typeof raw === 'string' && LANGS.includes(raw as Lang) ? (raw as Lang) : 'vi'
 }
 
-function pickTheme(raw: unknown): ThemeId {
-  if (raw === 'kem') return 'que'
-  if (raw === 'muc') return 'ket'
-  if (raw === 'cho') return 'duyen'
-  return typeof raw === 'string' && THEMES.includes(raw as ThemeId) ? (raw as ThemeId) : 'que'
+function pickTheme(_raw: unknown): ThemeId {
+  return 'que'
 }
 
 function pickUiTheme(raw: unknown): UiTheme | null {

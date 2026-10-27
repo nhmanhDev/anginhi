@@ -33,12 +33,12 @@ test('parseStore keeps a custom budget amount', () => {
   assert.equal(parsed.spendCustom, true)
 })
 
-test('parseStore maps legacy theme field to mode and defaults ui.theme', () => {
+test('parseStore maps retired modes back to quẻ and defaults ui.theme', () => {
   assert.equal(parseStore({ v: 1, theme: 'kem', lang: 'zh' }).mode, 'que')
-  assert.equal(parseStore({ v: 1, theme: 'muc' }).mode, 'ket')
-  assert.equal(parseStore({ v: 1, theme: 'cho' }).mode, 'duyen')
-  assert.equal(parseStore({ v: 1, theme: 'meo', lang: 'ja' }).mode, 'meo')
-  assert.equal(parseStore({ v: 1, mode: 'khui' }).mode, 'khui')
+  assert.equal(parseStore({ v: 1, theme: 'muc' }).mode, 'que')
+  assert.equal(parseStore({ v: 1, theme: 'cho' }).mode, 'que')
+  assert.equal(parseStore({ v: 1, theme: 'meo', lang: 'ja' }).mode, 'que')
+  assert.equal(parseStore({ v: 1, mode: 'khui' }).mode, 'que')
   assert.equal(parseStore({ v: 1 }).ui.theme, null)
   assert.equal(parseStore({ v: 1, ui: { theme: 'dark' } }).ui.theme, 'dark')
   assert.equal(parseStore({ v: 1, ui: { theme: 'neon' } }).ui.theme, null)

@@ -37,10 +37,10 @@ export function Select<T extends string>({
   }, [open])
 
   return (
-    <div className="field-pick" ref={box}>
+    <div className="select-wrap field-pick" ref={box}>
       <button
         type="button"
-        className="field-select"
+        className={open ? 'select-btn is-open' : 'select-btn'}
         aria-label={label}
         aria-expanded={open}
         aria-haspopup="listbox"
@@ -51,7 +51,7 @@ export function Select<T extends string>({
         <ChevronMark />
       </button>
       {open ? (
-        <ul className="field-menu" role="listbox" aria-label={label}>
+        <ul className="menu" role="listbox" aria-label={label}>
           {options.map((item) => (
             <li key={item.id || 'any'}>
               <button

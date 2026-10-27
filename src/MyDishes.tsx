@@ -120,44 +120,68 @@ export function MyDishes({
   return (
     <div className="dialog-back" onClick={onClose}>
       <div
-        className="dialog"
+        className="dialog mine"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="dialog-head">
-          <h2 id={titleId}>{copy.mine}</h2>
-          <button type="button" className="text-btn" onClick={onClose}>
-            {copy.close}
+        <div className="dialog-head mine-head">
+          <div>
+            <p className="mine-kicker">
+              {enabled.length} {copy.dishes}
+            </p>
+            <h2 id={titleId}>{copy.mine}</h2>
+          </div>
+          <button
+            type="button"
+            className="btn-close-dialog"
+            onClick={onClose}
+            aria-label={copy.close}
+            title={copy.close}
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
           </button>
         </div>
 
         <div className="mine-tabs" role="tablist">
           <button
             type="button"
+            role="tab"
+            aria-selected={tab === 'builtIn'}
             className={tab === 'builtIn' ? 'on' : undefined}
             onClick={() => setTab('builtIn')}
           >
-            {copy.catalogTab} ({CATALOG.length - disabled.length})
+            {copy.catalogTab}
+            <em>{CATALOG.length - disabled.length}</em>
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={tab === 'custom'}
             className={tab === 'custom' ? 'on' : undefined}
             onClick={() => setTab('custom')}
           >
-            {copy.customTab} ({custom.length}/50)
+            {copy.customTab}
+            <em>
+              {custom.length}/50
+            </em>
           </button>
         </div>
 
         {tab === 'builtIn' ? (
           <section className="dialog-catalog">
             <label className="field" htmlFor={searchId}>
-              {copy.findBuiltin}
+              <span className="field-label">{copy.findBuiltin}</span>
               <input
                 id={searchId}
                 ref={firstField}
                 value={search}
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="off"
                 onChange={(event) => setSearch(event.target.value)}
                 type="search"
               />
@@ -169,68 +193,83 @@ export function MyDishes({
                 const lastOn = on && enabled.length === 1
                 return (
                   <li key={dish.id}>
-                    <label className="check">
+                    <label className={on ? 'dish-row' : 'dish-row is-off'}>
+                      {dish.image ? (
+                        <img className="thumb" src={dish.image} alt="" />
+                      ) : (
+                        <span className="thumb thumb-gap" />
+                      )}
+                      <span className="dish-copy">
+                        <strong>
+                          {dishName(dish, lang)}
+                          {dish.veg && <span className="veg-dot" />}
+                        </strong>
+                        <small>
+                          {typeLabel(dish.type, lang)}
+                          {dish.region ? ` · ${regionLabel(dish.region, lang)}` : ''}
+                          {` · ${dish.price}k`}
+                        </small>
+                      </span>
                       <input
                         type="checkbox"
                         checked={on}
                         disabled={lastOn}
                         onChange={() => onToggleBuiltin(dish.id)}
                       />
-                      {dish.image && <img className="thumb" src={dish.image} alt="" />}
-                      <span>
-                        {dishName(dish, lang)}
-                        {dish.veg ? ` · ${copy.veg}` : ''}
-                        <small>
-                          {typeLabel(dish.type, lang)}
-                          {dish.region ? `, ${regionLabel(dish.region, lang)}` : ''}
-                          {` · ${dish.price}k`}
-                        </small>
-                      </span>
+                      <span className="switch-slider" aria-hidden="true" />
                     </label>
                   </li>
                 )
               })}
             </ul>
-            <button type="button" className="text-btn" onClick={onEnableAll}>
-              {copy.enableAll}
-            </button>
+            {shown.length === 0 && <p className="mine-empty">{copy.empty}</p>}
           </section>
         ) : (
-          <section className="dialog-form">
+          <section className="dialog-form mine-form">
             <div className="form-grid">
               <label className="field">
-                {copy.dishName}
-                <input value={name} onChange={(event) => setName(event.target.value)} maxLength={60} />
-              </label>
-              <label className="field">
-                {copy.dishPrice}
+                <span className="field-label">{copy.dishName}</span>
                 <input
-                  value={price}
-                  inputMode="numeric"
-                  onChange={(event) => setPrice(event.target.value)}
+                  value={name}
+                  spellCheck={false}
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  onChange={(event) => setName(event.target.value)}
+                  maxLength={60}
                 />
               </label>
               <label className="field">
-                {copy.type}
+                <span className="field-label">{copy.dishPrice}</span>
+                <input
+                  value={price}
+                  inputMode="numeric"
+                  spellCheck={false}
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  onChange={(event) => setPrice(event.target.value)}
+                />
+              </label>
+              <div className="field">
+                <span className="field-label">{copy.type}</span>
                 <Select
                   label={copy.type}
                   value={type}
                   options={TYPE_OPTIONS.map(([id]) => ({ id, label: typeLabel(id, lang) }))}
                   onChange={(id) => setType(id)}
                 />
-              </label>
-              <label className="field">
-                {copy.cuisine}
+              </div>
+              <div className="field">
+                <span className="field-label">{copy.cuisine}</span>
                 <Select
                   label={copy.cuisine}
                   value={cuisine}
                   options={CUISINE_OPTIONS.map(([id]) => ({ id, label: cuisineLabel(id, lang) }))}
                   onChange={(id) => setCuisine(id)}
                 />
-              </label>
+              </div>
               {cuisine === 'viet' && (
-                <label className="field">
-                  {copy.region}
+                <div className="field">
+                  <span className="field-label">{copy.region}</span>
                   <Select
                     label={copy.region}
                     value={region ?? ''}
@@ -240,10 +279,10 @@ export function MyDishes({
                     ]}
                     onChange={(id) => setRegion((id || null) as Region | null)}
                   />
-                </label>
+                </div>
               )}
-              <label className="field">
-                {copy.meal}
+              <div className="field">
+                <span className="field-label">{copy.meal}</span>
                 <Select
                   label={copy.meal}
                   value={course}
@@ -253,15 +292,16 @@ export function MyDishes({
                   }))}
                   onChange={(id) => setCourse(id)}
                 />
-              </label>
+              </div>
             </div>
-            <label className="veg-toggle">
+            <label className="console-veg-switch mine-veg">
               <input type="checkbox" checked={veg} onChange={() => setVeg((value) => !value)} />
+              <span className="switch-slider" />
               {copy.vegDish}
             </label>
             {error && <p className="field-error">{error}</p>}
             <div className="form-actions">
-              <button type="button" className="secondary" onClick={save}>
+              <button type="button" className="dock-pill-btn" onClick={save}>
                 {editing ? copy.updateDish : copy.addDish}
               </button>
               {editing && (
@@ -276,25 +316,26 @@ export function MyDishes({
                 {custom.map((dish) => {
                   const lastOn = enabled.length === 1 && enabled[0]?.id === dish.id
                   return (
-                    <li key={dish.id}>
-                      <button type="button" className="text-btn" onClick={() => edit(dish)}>
-                        {dish.name}
-                        {dish.veg ? ` · ${copy.veg}` : ''}
+                    <li key={dish.id} className={editing === dish.id ? 'custom-row is-editing' : 'custom-row'}>
+                      <button type="button" className="custom-main" onClick={() => edit(dish)}>
+                        <strong>
+                          {dish.name}
+                          {dish.veg && <span className="veg-dot" />}
+                        </strong>
                         <small>
-                          {' '}
                           {cuisineLabel(dish.cuisine, lang)} · {dish.price}k
                         </small>
                       </button>
                       <button
                         type="button"
-                        className="text-btn"
+                        className="mine-quiet"
                         disabled={lastOn}
                         onClick={() => {
                           onRemoveCustom(dish.id)
                           if (editing === dish.id) resetForm()
                         }}
                       >
-                        {lang === 'vi' ? 'Xóa' : 'Remove'}
+                        {copy.removeDish}
                       </button>
                     </li>
                   )
@@ -304,23 +345,20 @@ export function MyDishes({
           </section>
         )}
 
-        <p className="mine-foot">
-          {enabled.length} {copy.dishes} · {copy.opens}
-        </p>
-        <div className="form-actions">
-          <button
-            type="button"
-            className="text-btn"
-            onClick={() => setConfirm((value) => !value)}
-          >
-            {copy.clearSaved}
-          </button>
-          {confirm && (
-            <>
-              <span>{copy.confirmClear}</span>
+        <div className="mine-footbar">
+          {tab === 'builtIn' ? (
+            <button type="button" className="mine-quiet" onClick={onEnableAll}>
+              {copy.enableAll}
+            </button>
+          ) : (
+            <span />
+          )}
+          {confirm ? (
+            <div className="mine-confirm">
+              <p>{copy.confirmClear}</p>
               <button
                 type="button"
-                className="text-btn"
+                className="mine-quiet mine-danger"
                 onClick={() => {
                   onClearSaved()
                   resetForm()
@@ -329,7 +367,14 @@ export function MyDishes({
               >
                 {copy.confirmYes}
               </button>
-            </>
+              <button type="button" className="mine-quiet" onClick={() => setConfirm(false)}>
+                {copy.cancelEdit}
+              </button>
+            </div>
+          ) : (
+            <button type="button" className="mine-quiet mine-danger" onClick={() => setConfirm(true)}>
+              {copy.clearSaved}
+            </button>
           )}
         </div>
       </div>

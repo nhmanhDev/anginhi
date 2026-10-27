@@ -23,7 +23,7 @@ test('t() returns the table for that language', () => {
   assert.equal(t('vi').brand, 'Ăn gì nhỉ')
 })
 
-test('modeText covers 5 modes × 6 langs', () => {
+test('modeText covers quẻ in 6 langs', () => {
   for (const lang of langs) {
     for (const id of THEMES) {
       const line = modeText(id, lang)

@@ -86,3 +86,11 @@ test('fillSlots deals unique dishes while the bag lasts', () => {
     ['a', 'b', 'c'],
   )
 })
+
+test('fillSlots prefers dishes that have not been met', () => {
+  const items = ['a', 'b', 'c', 'd', 'e', 'f'].map((id) => ({ id }))
+  assert.deepEqual(
+    fillSlots(items, 5, () => 0, ['a', 'b', 'c', 'd']).map((item) => item.id),
+    ['e', 'f', 'a', 'b', 'c'],
+  )
+})

@@ -79,12 +79,18 @@ export function fillSlots<T extends { id: string }>(
   items: readonly T[],
   count: number,
   random: () => number = Math.random,
+  seen: readonly string[] = [],
 ): T[] {
   if (!items.length) throw new Error('empty')
+  const fresh = items.filter((item) => !seen.includes(item.id))
   const result: T[] = []
-  const bag = [...items]
+  const bag = [...(fresh.length ? fresh : items)]
   for (let i = 0; i < count; i++) {
-    if (!bag.length) bag.push(...items)
+    if (!bag.length) {
+      const used = new Set(result.map((item) => item.id))
+      const rest = items.filter((item) => !used.has(item.id))
+      bag.push(...(rest.length ? rest : items))
+    }
     const index = Math.min(bag.length - 1, Math.max(0, Math.floor(random() * bag.length)))
     result.push(bag.splice(index, 1)[0] as T)
   }

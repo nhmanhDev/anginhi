@@ -780,19 +780,33 @@ export function App() {
         <div className="archive-inner">
           <div className="archive-heading">
             <div className="archive-title-group">
-              <h2>{mode.catalog}</h2>
+              <span className="archive-kicker">{store.lang === 'vi' ? 'Bảo tàng hương vị' : 'Culinary Archive'}</span>
+              <h2 className="archive-title">{mode.catalog}</h2>
+              <p className="archive-subtitle">
+                {store.lang === 'vi'
+                  ? `Khám phá ${inventory.length} món ngon truyền thống chọn lọc từ khắp ba miền.`
+                  : `Explore ${inventory.length} classic Vietnamese & regional dishes.`}
+              </p>
             </div>
-            <label className="archive-search">
-              <span className="sr">{copy.search}</span>
-              <input
-                value={query}
-                spellCheck={false}
-                autoCorrect="off"
-                autoCapitalize="off"
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={copy.search}
-              />
-            </label>
+            <div className="archive-controls">
+              <label className="archive-search">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" className="search-icon">
+                  <circle cx="9" cy="9" r="6" />
+                  <path d="M13.5 13.5L18 18" />
+                </svg>
+                <input
+                  value={query}
+                  spellCheck={false}
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder={store.lang === 'vi' ? 'Tìm tên món, bún, cơm, phở...' : copy.search}
+                />
+              </label>
+              <div className="archive-count-pill">
+                <span>{listed.length} / {inventory.length}</span>
+              </div>
+            </div>
           </div>
 
           <div className="catalog-grid">
@@ -808,9 +822,20 @@ export function App() {
           </div>
 
           {inventory.length > 24 && (
-            <button type="button" className="archive-more-btn" onClick={() => setMore((value) => !value)}>
-              {more ? copy.less : copy.more}
-            </button>
+            <div className="archive-more-wrap">
+              <button type="button" className="archive-more-btn" onClick={() => setMore((value) => !value)}>
+                <span>{more ? copy.less : copy.more}</span>
+                <svg
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className={more ? 'more-chevron rotate' : 'more-chevron'}
+                >
+                  <path d="M4 6l4 4 4-4" />
+                </svg>
+              </button>
+            </div>
           )}
         </div>
       </section>

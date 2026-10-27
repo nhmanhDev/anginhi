@@ -30,6 +30,8 @@ import { LandingHeroMockups } from './LandingHeroMockups.tsx'
 import { LandingFeatures } from './LandingFeatures.tsx'
 import { LandingSteps } from './LandingSteps.tsx'
 import { LandingCta } from './LandingCta.tsx'
+import { initGsapAnimations } from './animations.ts'
+import { useSpotlightGlow } from './useSpotlightGlow.ts'
 import { playPick, playReveal } from './sound.ts'
 import { emptyStore, parseStore, STORAGE_KEY, writeStore, type Store } from './store.ts'
 import { resolveTheme } from './theme.ts'
@@ -206,6 +208,30 @@ export function App() {
   useEffect(() => {
     document.getElementById('boot-loader')?.classList.add('boot-loader-hidden')
     return () => cancelAnimationFrame(cancel.current)
+  }, [])
+
+  const [scrollProgress, setScrollProgress] = useState(0)
+
+  // Bật chuột bắt sáng (Pointer Spotlight Hairline) theo kiểu Linear/Raycast
+  useSpotlightGlow('.food-card, .bento-card, .landing-cta-card, .step-card')
+
+  // Khởi tạo GSAP ScrollTrigger & Micro-animations
+  useEffect(() => {
+    const cleanup = initGsapAnimations()
+    return () => cleanup()
+  }, [])
+
+  // Theo dõi cuộn trang để cập nhật hairline progress trên Capsule Dock
+  useEffect(() => {
+    const onScroll = () => {
+      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
+      if (scrollHeight > 0) {
+        const percent = Math.min(100, Math.max(0, (window.scrollY / scrollHeight) * 100))
+        setScrollProgress(percent)
+      }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
   const eligibleKey = eligible.map((dish) => dish.id).join(',')
@@ -385,6 +411,11 @@ export function App() {
       {/* Floating Capsule Dock */}
       <header className="gallery-dock">
         <div className="dock-inner">
+          <div
+            className="dock-scroll-hairline"
+            style={{ width: `${scrollProgress}%` }}
+            aria-hidden="true"
+          />
           <a className="brand" href="#chon">
             <BowlMark />
             <span className="brand-copy">

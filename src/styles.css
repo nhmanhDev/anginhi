@@ -153,6 +153,8 @@ h1, h2, h3, p { margin: 0; }
 }
 
 .dock-inner {
+  position: relative;
+  overflow: hidden;
   pointer-events: auto;
   display: flex;
   align-items: center;
@@ -174,6 +176,20 @@ h1, h2, h3, p { margin: 0; }
   background: rgba(21, 24, 33, 0.92);
   border-color: rgba(255, 255, 255, 0.12);
   box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Hairline chỉ báo tiến độ cuộn trang siêu mảnh */
+.dock-scroll-hairline {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #ff6f42 0%, #ff8a48 50%, #ffbe76 100%);
+  pointer-events: none;
+  border-radius: 999px;
+  box-shadow: 0 0 8px rgba(255, 111, 66, 0.7);
+  transition: width 0.08s linear;
+  z-index: 10;
 }
 
 .brand {
@@ -2133,6 +2149,70 @@ h1, h2, h3, p { margin: 0; }
 .food-card:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* ==========================================================================
+   HAIRLINE BORDERS & DYNAMIC MOUSE SPOTLIGHT (Linear / Raycast Visual Polish)
+   ========================================================================== */
+
+.food-card,
+.bento-card,
+.landing-cta-card,
+.step-card {
+  position: relative;
+  /* Inner bevel highlight - hairline kính mờ 1px mép trên */
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.15), 0 8px 20px -6px rgba(15, 23, 42, 0.05);
+}
+
+[data-theme='dark'] .food-card,
+[data-theme='dark'] .bento-card,
+[data-theme='dark'] .landing-cta-card,
+[data-theme='dark'] .step-card {
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.08), 0 8px 24px -8px rgba(0, 0, 0, 0.35);
+}
+
+/* Linear-style Mouse Tracking 1px Border Hairline Highlight */
+.food-card::before,
+.bento-card::before,
+.landing-cta-card::before,
+.step-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.25px; /* Độ dày chính xác của Hairline */
+  background: radial-gradient(
+    380px circle at var(--mouse-x, -999px) var(--mouse-y, -999px),
+    rgba(255, 111, 66, 0.65),
+    transparent 65%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: var(--spotlight-opacity, 0);
+  transition: opacity 0.25s ease;
+  z-index: 5;
+}
+
+/* Ánh sáng phản chiếu mặt kính nhẹ nhàng bên trong card theo vị trí chuột */
+.food-card::after,
+.bento-card::after,
+.landing-cta-card::after,
+.step-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    480px circle at var(--mouse-x, -999px) var(--mouse-y, -999px),
+    rgba(255, 111, 66, 0.04),
+    transparent 70%
+  );
+  pointer-events: none;
+  opacity: var(--spotlight-opacity, 0);
+  transition: opacity 0.3s ease;
+  z-index: 1;
 }
 
 /* Khung ảnh món ăn tỉ lệ 4:3 */

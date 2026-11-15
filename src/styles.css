@@ -2895,145 +2895,772 @@ h1, h2, h3, p { margin: 0; }
 .ghost, .secondary, .text-btn { background: transparent; color: var(--ink); }
 .ghost:hover, .secondary:hover, .text-btn:hover { background: var(--btn-hover-bg); }
 
-/* MyDishes Dialog */
-.dialog.mine {
-  width: min(560px, 100%);
+/* ==========================================================================
+   MY DISHES CRAFT MODAL DIALOG
+   ========================================================================== */
+
+.dialog.mine-modal-dialog {
+  width: min(640px, 94vw);
+  height: min(88vh, 760px);
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 24px 22px;
+  padding: 0;
   text-align: left;
   border-radius: 1.75rem;
+  background: var(--card);
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
 }
 
-.dialog-head, .mine-head {
+[data-theme='dark'] .dialog.mine-modal-dialog {
+  background: #131722;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 25px 70px -15px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+/* Modal Header */
+.mine-modal-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 16px;
+  padding: 24px 26px 16px;
+  border-bottom: 1px solid var(--panel-border);
 }
 
-.btn-close-dialog, .btn-close-coffee-modal {
-  width: 32px;
-  height: 32px;
+.mine-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mine-brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--btn-hover-bg);
+  border: 1px solid var(--panel-border);
+  color: var(--accent);
+  width: fit-content;
+}
+
+.mine-modal-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.45rem;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  margin: 4px 0 0;
+}
+
+.mine-modal-subtitle {
+  font-size: 13px;
+  color: var(--quiet);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.mine-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--btn-hover-bg);
+  border: 1px solid var(--panel-border);
+  color: var(--ink);
   display: grid;
   place-items: center;
-  border-radius: 50%;
-  border: 1px solid var(--line);
-  background: var(--card);
-  color: var(--ink);
   cursor: pointer;
-  transition: transform 0.25s ease;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
 }
 
-.btn-close-dialog:hover, .btn-close-coffee-modal:hover {
+.mine-close-btn:hover {
+  background: #ef4444;
+  color: #ffffff;
+  border-color: #ef4444;
   transform: rotate(90deg);
 }
 
-.mine-tabs {
+/* Segmented Control Tabs */
+.mine-segmented-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 12px;
-  background: var(--paper);
-  border: 1px solid var(--line);
+  gap: 6px;
+  padding: 6px;
+  margin: 16px 26px 8px;
+  background: var(--btn-hover-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
 }
 
-.mine-tabs button {
-  display: flex;
+.mine-segmented-tabs button {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   min-height: 38px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 999px;
   background: transparent;
   color: var(--quiet);
-  cursor: pointer;
   font-weight: 600;
-  font-size: 0.88rem;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.mine-tabs .on {
+.mine-segmented-tabs button.active {
   background: var(--card);
   color: var(--ink);
-  box-shadow: var(--shadow-sm);
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.dish-list, .custom-list {
+[data-theme='dark'] .mine-segmented-tabs button.active {
+  background: #1c2230;
+  color: #ffffff;
+}
+
+.tab-icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.tab-count-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--btn-hover-bg);
+  color: var(--accent);
+}
+
+.mine-body-container {
+  flex: 1;
+  min-height: 0;
+  padding: 12px 26px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Search Bar Box */
+.mine-search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.mine-search-icon {
+  position: absolute;
+  left: 14px;
+  width: 17px;
+  height: 17px;
+  color: var(--quiet);
+  pointer-events: none;
+}
+
+.mine-search-field {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 38px 0 40px;
+  border-radius: 999px;
+  border: 1.5px solid var(--panel-border);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 13.5px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.mine-search-field:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(255, 111, 66, 0.15);
+}
+
+.mine-search-clear-btn {
+  position: absolute;
+  right: 12px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--btn-hover-bg);
+  border: none;
+  color: var(--quiet);
+  font-size: 11px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.mine-search-clear-btn:hover {
+  background: var(--ink);
+  color: var(--card);
+}
+
+/* Danh sách món ăn Built-in */
+.mine-dish-scroll-list {
+  list-style: none;
   margin: 0;
   padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+
+.mine-dish-row {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: var(--card);
+  border: 1px solid var(--panel-border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mine-dish-row:hover {
+  border-color: rgba(255, 111, 66, 0.4);
+  background: var(--btn-hover-bg);
+  transform: translateX(2px);
+}
+
+.mine-dish-row.disabled {
+  opacity: 0.55;
+}
+
+.mine-dish-row.disabled .mine-dish-thumb {
+  filter: grayscale(0.85);
+}
+
+.mine-dish-thumb-frame {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--blush);
+  flex-shrink: 0;
+}
+
+.mine-dish-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.mine-dish-row:hover .mine-dish-thumb {
+  transform: scale(1.08);
+}
+
+.mine-dish-thumb-gap {
+  width: 100%;
+  height: 100%;
+  background: var(--btn-hover-bg);
+}
+
+.mine-veg-dot-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.8);
+}
+
+.mine-dish-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mine-dish-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mine-dish-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mine-dish-price-pill {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #ff6f42;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.mine-dish-tags {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: var(--quiet);
+}
+
+.tag-dot { opacity: 0.4; }
+
+/* Toggle Switch Cam Ấm */
+.mine-switch-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.mine-toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.mine-toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 24px;
+  background: #cbd5e1;
+  border-radius: 999px;
+  transition: background 0.25s ease;
+  cursor: pointer;
+}
+
+[data-theme='dark'] .mine-toggle-switch {
+  background: #334155;
+}
+
+.mine-toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mine-toggle-input:checked + .mine-toggle-switch {
+  background: #ff6f42;
+  box-shadow: 0 0 10px rgba(255, 111, 66, 0.45);
+}
+
+.mine-toggle-input:checked + .mine-toggle-switch::after {
+  transform: translateX(18px);
+}
+
+.mine-toggle-input:disabled + .mine-toggle-switch {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Empty State */
+.mine-empty-state, .mine-custom-empty {
+  text-align: center;
+  padding: 36px 16px;
+  color: var(--quiet);
+}
+
+.empty-icon, .empty-fork-icon {
+  font-size: 32px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+/* Custom Dish Form */
+.mine-custom-form-card {
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: var(--btn-hover-bg);
+  border: 1px solid var(--panel-border);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.custom-form-heading {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0;
+}
+
+.mine-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 520px) {
+  .mine-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-field-group.col-span-2 {
+  grid-column: span 2;
+}
+
+@media (max-width: 520px) {
+  .form-field-group.col-span-2 {
+    grid-column: span 1;
+  }
+}
+
+.field-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.required-star {
+  color: #ef4444;
+}
+
+.mine-input-control {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid var(--panel-border);
+  color: var(--ink);
+  font-size: 13.5px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.mine-input-control:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(255, 111, 66, 0.15);
+}
+
+.input-with-addon {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.input-unit-addon {
+  position: absolute;
+  right: 12px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--quiet);
+  pointer-events: none;
+}
+
+.mine-veg-checkbox-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--panel-border);
+  cursor: pointer;
+}
+
+.veg-label-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.veg-hint {
+  color: var(--quiet);
+  font-size: 11.5px;
+}
+
+.mine-error-msg {
+  font-size: 12.5px;
+  color: #ef4444;
+  margin: 0;
+  font-weight: 600;
+}
+
+.mine-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.mine-primary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 24px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ff6f42 0%, #ee5a2b 100%);
+  color: #ffffff;
+  border: none;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 18px -4px rgba(255, 111, 66, 0.45);
+  transition: all 0.2s ease;
+}
+
+.mine-primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -4px rgba(255, 111, 66, 0.6);
+}
+
+.mine-cancel-btn {
+  background: transparent;
+  border: none;
+  color: var(--quiet);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 12px;
+}
+
+.mine-cancel-btn:hover {
+  color: var(--ink);
+}
+
+/* Custom Dish Created List */
+.mine-custom-list-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.custom-list-heading {
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--quiet);
+  margin: 0;
+}
+
+.mine-custom-dish-list {
   list-style: none;
-  max-height: min(46vh, 420px);
-  overflow: auto;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.dish-row, .custom-row {
-  display: grid;
-  grid-template-columns: 52px minmax(0, 1fr) auto;
+.custom-dish-card {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  min-height: 68px;
-  padding: 8px 12px;
-  border: 1px solid var(--line);
+  padding: 10px 14px;
   border-radius: 12px;
   background: var(--card);
+  border: 1px solid var(--panel-border);
+  transition: all 0.2s ease;
+}
+
+.custom-dish-card:hover {
+  border-color: rgba(255, 111, 66, 0.4);
+}
+
+.custom-dish-card.is-editing {
+  border-color: var(--accent);
+  background: rgba(255, 111, 66, 0.06);
+}
+
+.custom-dish-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   cursor: pointer;
+  flex: 1;
 }
 
-.thumb {
-  width: 52px;
-  height: 52px;
-  object-fit: cover;
-  border-radius: 10px;
-  background: var(--blush);
+.custom-dish-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.dish-copy strong, .custom-main strong {
+.custom-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.custom-veg-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #10b981;
+}
+
+.custom-price-tag {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #ff6f42;
+  margin-left: auto;
+}
+
+.custom-dish-sub {
+  font-size: 11.5px;
+  color: var(--quiet);
+}
+
+.custom-dish-actions {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-weight: 700;
-  font-size: 0.92rem;
 }
 
-.dish-copy small, .custom-main small {
-  display: block;
-  margin-top: 2px;
-  color: var(--quiet);
-  font-size: 0.8rem;
+.btn-action-edit, .btn-action-delete {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: var(--btn-hover-bg);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  transition: all 0.15s ease;
 }
 
-.dish-row input { position: absolute; opacity: 0; }
-.dish-row input:checked + .switch-slider { background: var(--leaf); }
-.dish-row input:checked + .switch-slider::after { transform: translateX(18px); background: #ffffff; }
+.btn-action-edit:hover {
+  background: var(--card);
+  border-color: var(--accent);
+  transform: scale(1.08);
+}
 
-.mine-footbar {
+.btn-action-delete:hover {
+  background: #ef4444;
+  border-color: #ef4444;
+  transform: scale(1.08);
+}
+
+/* Modal Footbar */
+.mine-modal-footbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  padding-top: 8px;
-  border-top: 1px solid var(--line);
+  padding: 16px 26px;
+  background: var(--card);
+  border-top: 1px solid var(--panel-border);
 }
 
-.mine-quiet {
-  border: 0;
-  background: none;
-  color: var(--quiet);
+.mine-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--btn-hover-bg);
+  border: 1px solid var(--panel-border);
+  color: var(--ink);
+  font-size: 12.5px;
   font-weight: 600;
-  font-size: 0.86rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mine-btn-secondary:hover {
+  background: var(--ink);
+  color: var(--card);
+}
+
+.check-all-icon {
+  font-weight: 800;
+}
+
+.mine-btn-danger {
+  background: transparent;
+  border: none;
+  color: var(--chili);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 10px;
+  transition: opacity 0.2s ease;
+}
+
+.mine-btn-danger:hover {
+  text-decoration: underline;
+  opacity: 0.8;
+}
+
+.mine-confirm-panel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.confirm-text {
+  color: var(--quiet);
+}
+
+.btn-confirm-yes {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+  font-size: 11.5px;
+  font-weight: 700;
   cursor: pointer;
 }
 
-.mine-quiet:hover { color: var(--ink); }
-.mine-danger { color: var(--chili); }
+.btn-confirm-no {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--btn-hover-bg);
+  border: 1px solid var(--panel-border);
+  color: var(--ink);
+  font-size: 11.5px;
+  cursor: pointer;
+}
 
-/* Coffee Modal */
+/* ==========================================================================
+   10. COFFEE & DONATE MODAL
+   ========================================================================== */
 .modal-content.coffee-modal {
   position: relative;
   width: min(420px, 100%);

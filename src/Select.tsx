@@ -37,10 +37,10 @@ export function Select<T extends string>({
   }, [open])
 
   return (
-    <div className="field-pick" ref={box}>
+    <div className="select-wrap field-pick" ref={box}>
       <button
         type="button"
-        className="field-select"
+        className={open ? 'select-btn is-open' : 'select-btn'}
         aria-label={label}
         aria-expanded={open}
         aria-haspopup="listbox"
@@ -51,19 +51,25 @@ export function Select<T extends string>({
         <ChevronMark />
       </button>
       {open ? (
-        <ul className="field-menu" role="listbox" aria-label={label}>
+        <ul className="menu" role="listbox" aria-label={label}>
           {options.map((item) => (
             <li key={item.id || 'any'}>
               <button
                 type="button"
                 role="option"
                 aria-selected={item.id === value}
+                className={item.id === value ? 'is-selected' : undefined}
                 onClick={() => {
                   onChange(item.id)
                   setOpen(false)
                 }}
               >
-                {item.label}
+                <span>{item.label}</span>
+                {item.id === value ? (
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="menu-check">
+                    <path d="M3.5 8.5L6.5 11.5L12.5 4.5" />
+                  </svg>
+                ) : null}
               </button>
             </li>
           ))}

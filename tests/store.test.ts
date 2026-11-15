@@ -33,12 +33,15 @@ test('parseStore keeps a custom budget amount', () => {
   assert.equal(parsed.spendCustom, true)
 })
 
-test('parseStore maps old theme ids and keeps six langs', () => {
-  assert.equal(parseStore({ v: 1, theme: 'kem', lang: 'zh' }).theme, 'que')
-  assert.equal(parseStore({ v: 1, theme: 'muc' }).theme, 'ket')
-  assert.equal(parseStore({ v: 1, theme: 'cho' }).theme, 'duyen')
-  assert.equal(parseStore({ v: 1, theme: 'meo', lang: 'ja' }).theme, 'meo')
-  assert.equal(parseStore({ v: 1, mode: 'khui' }).theme, 'khui')
+test('parseStore maps retired modes back to quẻ and defaults ui.theme', () => {
+  assert.equal(parseStore({ v: 1, theme: 'kem', lang: 'zh' }).mode, 'que')
+  assert.equal(parseStore({ v: 1, theme: 'muc' }).mode, 'que')
+  assert.equal(parseStore({ v: 1, theme: 'cho' }).mode, 'que')
+  assert.equal(parseStore({ v: 1, theme: 'meo', lang: 'ja' }).mode, 'que')
+  assert.equal(parseStore({ v: 1, mode: 'khui' }).mode, 'que')
+  assert.equal(parseStore({ v: 1 }).ui.theme, null)
+  assert.equal(parseStore({ v: 1, ui: { theme: 'dark' } }).ui.theme, 'dark')
+  assert.equal(parseStore({ v: 1, ui: { theme: 'neon' } }).ui.theme, null)
   assert.equal(parseStore({ v: 1, lang: 'ja' }).lang, 'ja')
   assert.equal(parseStore({ v: 1, lang: 'xx' }).lang, 'vi')
 })

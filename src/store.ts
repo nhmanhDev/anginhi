@@ -1,4 +1,4 @@
-import type { Course, Cuisine, Dish, DishType, Filters, Lang, Region, ThemeId } from './types.ts'
+import type { Course, Cuisine, Dish, DishType, Filters, Lang, Region, ThemeId, UiTheme } from './types.ts'
 
 export const STORAGE_KEY = 'anginhi-v1'
 export const STORAGE_FAIL = 'Không lưu được trên trình duyệt này.'
@@ -12,7 +12,8 @@ export type Store = {
   lastId: string | null
   sound: boolean
   lang: Lang
-  theme: ThemeId
+  mode: ThemeId
+  ui: { theme: UiTheme | null }
   picks: number
   recent: string[]
   spendCustom: boolean
@@ -33,7 +34,8 @@ export function emptyStore(): Store {
     lastId: null,
     sound: true,
     lang: 'vi',
-    theme: 'que',
+    mode: 'que',
+    ui: { theme: null },
     picks: 0,
     recent: [],
     spendCustom: false,
@@ -63,7 +65,8 @@ export function parseStore(raw: unknown): Store {
     lastId: typeof value.lastId === 'string' ? value.lastId : null,
     sound: value.sound !== false,
     lang: pickLang(value.lang),
-    theme: pickTheme(value.mode ?? value.theme),
+    mode: pickTheme(value.mode ?? value.theme),
+    ui: { theme: pickUiTheme(value.ui) },
     picks: typeof value.picks === 'number' && value.picks > 0 ? Math.floor(value.picks) : 0,
     recent: Array.isArray(value.recent)
       ? value.recent.filter((id): id is string => typeof id === 'string').slice(0, 8)
@@ -154,15 +157,17 @@ function pickBudget(filters: unknown): number | null {
 }
 
 const LANGS: Lang[] = ['vi', 'en', 'zh', 'ko', 'ja', 'hi']
-const THEMES: ThemeId[] = ['ket', 'duyen', 'khui', 'que', 'meo']
 
 function pickLang(raw: unknown): Lang {
   return typeof raw === 'string' && LANGS.includes(raw as Lang) ? (raw as Lang) : 'vi'
 }
 
-function pickTheme(raw: unknown): ThemeId {
-  if (raw === 'kem') return 'que'
-  if (raw === 'muc') return 'ket'
-  if (raw === 'cho') return 'duyen'
-  return typeof raw === 'string' && THEMES.includes(raw as ThemeId) ? (raw as ThemeId) : 'que'
+function pickTheme(_raw: unknown): ThemeId {
+  return 'que'
+}
+
+function pickUiTheme(raw: unknown): UiTheme | null {
+  if (!raw || typeof raw !== 'object') return null
+  const theme = (raw as Record<string, unknown>).theme
+  return theme === 'light' || theme === 'dark' ? theme : null
 }

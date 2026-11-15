@@ -81,5 +81,5 @@ export const NAME_EN: Record<string, string> = {
 }
 
 export function dishName(dish: Pick<Dish, 'id' | 'name'>, lang: Lang) {
-  return lang === 'en' ? (NAME_EN[dish.id] ?? dish.name) : dish.name
+  return lang === 'vi' ? dish.name : (NAME_EN[dish.id] ?? dish.name)
 }

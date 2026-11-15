@@ -3,11 +3,13 @@ import { AREAS } from './areas.ts'
 import { Card } from './Card.tsx'
 import { CATALOG } from './catalog.ts'
 import { StampMany } from './Chips.tsx'
-import { COURSE_I18N, LANG_LOCALE, LANG_OPTIONS, THEME_I18N, THEMES, money, t } from './copy.ts'
+import { COURSE_I18N, LANG_LOCALE, LANG_OPTIONS, money, t } from './copy.ts'
 import { modeText } from './modes.ts'
 import { Donate } from './Donate.tsx'
+import { Footer } from './Footer.tsx'
+import { ErrorCard } from './ErrorCard.tsx'
 import { eligibleDishes } from './filter.ts'
-import { BowlMark, ChevronMark, CourseMark, GlobeMark, ThemeMark, VolumeMark } from './icons.tsx'
+import { BowlMark, ChevronMark, CourseMark, GlobeMark, MoonMark, SunMark, VolumeMark } from './icons.tsx'
 import {
   BUDGETS,
   CUISINE_OPTIONS,
@@ -21,11 +23,19 @@ import { grabSearchUrl, mapsSearchUrl, shopeeSearchUrl } from './maps.ts'
 import { dishName } from './names.ts'
 import { MyDishes } from './MyDishes.tsx'
 import { Select } from './Select.tsx'
-import { fillSlots, pickUnseen, pickWeighted, weightedMean } from './pick.ts'
+import { MagnetButton, Tilt } from './motion.tsx'
+import { fillSlots, weightedMean } from './pick.ts'
 import { Scene } from './Scene.tsx'
+import { LandingHeroMockups } from './LandingHeroMockups.tsx'
+import { LandingFeatures } from './LandingFeatures.tsx'
+import { LandingSteps } from './LandingSteps.tsx'
+import { LandingCta } from './LandingCta.tsx'
+import { initGsapAnimations } from './animations.ts'
+import { useSpotlightGlow } from './useSpotlightGlow.ts'
 import { playPick, playReveal } from './sound.ts'
 import { emptyStore, parseStore, STORAGE_KEY, writeStore, type Store } from './store.ts'
-import type { Course, Cuisine, Dish, DishType, Lang, Region, ThemeId } from './types.ts'
+import { resolveTheme } from './theme.ts'
+import type { Course, Cuisine, Dish, DishType, Lang, Region } from './types.ts'
 
 function loadStore(): Store {
   try {
@@ -78,10 +88,10 @@ function LangPick({
   }, [open])
 
   return (
-    <div className="lang-pick" ref={box}>
+    <div className="lang-select-wrap lang-pick" ref={box}>
       <button
         type="button"
-        className="lang-trigger"
+        className={open ? 'lang-btn lang-trigger is-open' : 'lang-btn lang-trigger'}
         aria-label={label}
         aria-expanded={open}
         aria-haspopup="listbox"
@@ -99,12 +109,18 @@ function LangPick({
                 type="button"
                 role="option"
                 aria-selected={item.id === lang}
+                className={item.id === lang ? 'lang-option is-selected' : 'lang-option'}
                 onClick={() => {
                   onChange(item.id)
                   setOpen(false)
                 }}
               >
-                {item.label}
+                <span>{item.label}</span>
+                {item.id === lang ? (
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="menu-check">
+                    <path d="M3.5 8.5L6.5 11.5L12.5 4.5" />
+                  </svg>
+                ) : null}
               </button>
             </li>
           ))}
@@ -124,16 +140,17 @@ export function App() {
   const [more, setMore] = useState(false)
   const [query, setQuery] = useState('')
   const [copied, setCopied] = useState(false)
+  const [copyError, setCopyError] = useState(false)
+  const [prefersDark, setPrefersDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches)
   const [spendDraft, setSpendDraft] = useState(String(store.filters.budget ?? 50))
   const [slot, setSlot] = useState<number | null>(null)
   const [lots, setLots] = useState<(Dish | null)[]>(emptyLots)
   const [lotsDealt, setLotsDealt] = useState(false)
   const [albumOpen, setAlbumOpen] = useState(false)
-  const placeBox = useRef<HTMLDetailsElement>(null)
   const cancel = useRef(0)
-  const think = useRef(0)
   const copy = t(store.lang)
-  const mode = modeText(store.theme, store.lang)
+  const mode = modeText(store.mode, store.lang)
+  const resolvedTheme = resolveTheme(store.ui.theme, prefersDark)
 
   const pool = useMemo(() => [...CATALOG, ...store.custom], [store.custom])
   const eligible = useMemo(
@@ -149,11 +166,12 @@ export function App() {
     return q ? rows.filter((dish) => dish.name.toLocaleLowerCase('vi').includes(q)) : rows
   }, [eligible, query])
   const live = busy ? shown : result
+  const seenCount = store.seen.filter((id) => pool.some((dish) => dish.id === id)).length
   const boardText = empty
     ? copy.empty
-    : busy && !shown
+    : busy
       ? mode.picking
-      : store.theme === 'que' && lotsDealt && slot == null
+      : lotsDealt && slot == null
         ? mode.dealt
         : live
           ? dishName(live, store.lang)
@@ -173,25 +191,47 @@ export function App() {
     .filter((dish): dish is Dish => Boolean(dish))
 
   useEffect(() => {
-    document.documentElement.lang = store.lang
-  }, [store.lang])
-
-  useEffect(() => {
-    const raw = new URLSearchParams(window.location.search).get('mode')
-    if (!raw || !THEMES.includes(raw as ThemeId)) return
-    setStore((current) => {
-      if (current.theme === raw) return current
-      const next = { ...current, theme: raw as ThemeId }
-      writeStore(next, localStorage)
-      return next
-    })
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const onChange = () => setPrefersDark(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
   }, [])
 
   useEffect(() => {
-    return () => {
-      cancelAnimationFrame(cancel.current)
-      window.clearTimeout(think.current)
+    document.documentElement.lang = store.lang
+    document.documentElement.dataset.theme = resolvedTheme
+    document.title = copy.brand
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) meta.setAttribute('content', resolvedTheme === 'dark' ? '#1c212b' : '#f4f6f8')
+  }, [store.lang, resolvedTheme, copy.brand])
+
+  useEffect(() => {
+    document.getElementById('boot-loader')?.classList.add('boot-loader-hidden')
+    return () => cancelAnimationFrame(cancel.current)
+  }, [])
+
+  const [scrollProgress, setScrollProgress] = useState(0)
+
+  // Bật chuột bắt sáng (Pointer Spotlight Hairline) theo kiểu Linear/Raycast
+  useSpotlightGlow('.food-card, .bento-card, .landing-cta-card, .step-card')
+
+  // Khởi tạo GSAP ScrollTrigger & Micro-animations
+  useEffect(() => {
+    const cleanup = initGsapAnimations()
+    return () => cleanup()
+  }, [])
+
+  // Theo dõi cuộn trang để cập nhật hairline progress trên Capsule Dock
+  useEffect(() => {
+    const onScroll = () => {
+      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
+      if (scrollHeight > 0) {
+        const percent = Math.min(100, Math.max(0, (window.scrollY / scrollHeight) * 100))
+        setScrollProgress(percent)
+      }
     }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
   const eligibleKey = eligible.map((dish) => dish.id).join(',')
@@ -199,7 +239,7 @@ export function App() {
     setLots(emptyLots())
     setLotsDealt(false)
     setSlot(null)
-  }, [eligibleKey, store.theme])
+  }, [eligibleKey])
 
   function commit(next: Store) {
     setStore(next)
@@ -210,6 +250,8 @@ export function App() {
   function finishPick(winner: Dish) {
     setShown(winner)
     setBusy(false)
+    setCopied(false)
+    setCopyError(false)
     setReveal(true)
     if (store.sound) playReveal()
     const recent = [winner.id, ...store.recent.filter((id) => id !== winner.id)].slice(0, 8)
@@ -242,29 +284,16 @@ export function App() {
   }
 
   function beginShuffle(winner: Dish, list: Dish[]) {
-    window.clearTimeout(think.current)
     setBusy(true)
     setReveal(false)
-    if (store.theme === 'meo' && !prefersReducedMotion() && list.length > 1) {
-      setShown(null)
-      think.current = window.setTimeout(() => shuffleDishes(winner, list), 700)
-      return
-    }
     setShown(list.find((dish) => dish.id !== winner.id) ?? winner)
     shuffleDishes(winner, list)
-  }
-
-  function runPick(unseen = false) {
-    if (busy || empty || !customValid) return
-    if (store.sound) playPick()
-    const winner = unseen ? pickUnseen(eligible, store.seen, target) : pickWeighted(eligible, target)
-    beginShuffle(winner, eligible)
   }
 
   function dealLots() {
     if (busy || empty || !customValid) return
     if (store.sound) playPick()
-    setLots(fillSlots(eligible, 5))
+    setLots(fillSlots(eligible, 5, Math.random, store.seen))
     setLotsDealt(true)
     setSlot(null)
     setShown(null)
@@ -284,25 +313,21 @@ export function App() {
 
   function pick() {
     if (busy || empty || !customValid) return
-    if (store.theme === 'que') {
-      if (!lotsDealt) {
-        dealLots()
-        return
-      }
-      if (slot == null) {
-        revealLot(Math.floor(Math.random() * 5))
-        return
-      }
+    if (!lotsDealt) {
       dealLots()
       return
     }
-    runPick(store.theme === 'duyen')
+    if (slot == null) {
+      revealLot(Math.floor(Math.random() * 5))
+      return
+    }
+    dealLots()
   }
 
   function pickFromSlot(index: number) {
     if (busy || empty || !customValid) return
     if (!lotsDealt) {
-      const dealt = fillSlots(eligible, 5)
+      const dealt = fillSlots(eligible, 5, Math.random, store.seen)
       setLots(dealt)
       setLotsDealt(true)
       revealLot(index, dealt)
@@ -310,17 +335,6 @@ export function App() {
     }
     if (slot != null) return
     revealLot(index)
-  }
-
-  function setMode(id: ThemeId) {
-    setSlot(null)
-    setLots(emptyLots())
-    setLotsDealt(false)
-    setAlbumOpen(false)
-    commit({ ...store, theme: id })
-    const url = new URL(window.location.href)
-    url.searchParams.set('mode', id)
-    window.history.replaceState(null, '', url)
   }
 
   function pickOne(dish: Dish) {
@@ -341,290 +355,491 @@ export function App() {
     commit({ ...store, lang })
   }
 
+  function toggleBuiltin(id: string) {
+    const next = toggle(store.disabled, id)
+    const remain = eligibleDishes(pool, next, { types: [], cuisines: [], regions: [] })
+    if (remain.length === 0) return
+    commit({ ...store, disabled: next, lastId: store.lastId === id ? null : store.lastId })
+  }
+
+  function enableAll() {
+    commit({ ...store, disabled: [] })
+  }
+
+  function clearSaved() {
+    commit({
+      ...store,
+      custom: [],
+      disabled: [],
+      lastId: store.lastId && CATALOG.some((dish) => dish.id === store.lastId) ? store.lastId : null,
+      recent: store.recent.filter((id) => CATALOG.some((dish) => dish.id === id)),
+    })
+  }
+
+  function addCustom(dish: Dish) {
+    commit({ ...store, custom: [...store.custom, dish] })
+  }
+
+  function updateCustom(dish: Dish) {
+    commit({
+      ...store,
+      custom: store.custom.map((item) => (item.id === dish.id ? dish : item)),
+    })
+  }
+
+  function removeCustom(id: string) {
+    const nextCustom = store.custom.filter((dish) => dish.id !== id)
+    const remain = eligibleDishes([...CATALOG, ...nextCustom], store.disabled, {
+      types: [],
+      cuisines: [],
+      regions: [],
+    })
+    if (remain.length === 0) return
+    commit({
+      ...store,
+      custom: nextCustom,
+      lastId: store.lastId === id ? null : store.lastId,
+      recent: store.recent.filter((item) => item !== id),
+    })
+  }
+
   return (
-    <div className="site" data-mode={store.theme}>
-      <header className="bar">
-        <a className="brand" href="#chon">
-          <BowlMark />
-          <span>
-            {copy.brand}
-            <small>{copy.tag}</small>
-          </span>
-        </a>
-        <a className="header-link" href="#kho">
-          {copy.stock}
-        </a>
-        <LangPick lang={store.lang} label={copy.language} onChange={setLang} />
-        <Donate label={copy.donate} hint={copy.donateHint} closeLabel={copy.close} />
-        <button
-          type="button"
-          className="icon-btn"
-          aria-pressed={store.sound}
-          aria-label={store.sound ? copy.soundMute : copy.soundUnmute}
-          title={store.sound ? copy.soundMute : copy.soundUnmute}
-          onClick={() => commit({ ...store, sound: !store.sound })}
-        >
-          <VolumeMark on={store.sound} />
-        </button>
-        <button type="button" className="ghost" onClick={() => setMineOpen(true)}>
-          {copy.mine}
-        </button>
+    <div className="site" data-mode={store.mode}>
+      <div className="exhibition-ambient-spotlight" />
+      <div className="exhibition-grain" />
+
+      {/* Floating Capsule Dock */}
+      <header className="gallery-dock">
+        <div className="dock-inner">
+          <div
+            className="dock-scroll-hairline"
+            style={{ width: `${scrollProgress}%` }}
+            aria-hidden="true"
+          />
+          <a className="brand" href="#chon">
+            <BowlMark />
+            <span className="brand-copy">
+              <span className="brand-name">{copy.brand}</span>
+              <small className="brand-kicker">{copy.tag}</small>
+            </span>
+          </a>
+
+          <nav className="dock-nav-links">
+            <a className="dock-nav-item" href="#chon">
+              {mode.title}
+            </a>
+            <a className="dock-nav-item" href="#tinh-nang">
+              {copy.featuresTitle}
+            </a>
+            <a className="dock-nav-item" href="#bo-loc">
+              {copy.step1}
+            </a>
+            <a className="dock-nav-item" href="#quy-trinh">
+              {store.lang === 'vi' ? 'Quy trình' : 'Steps'}
+            </a>
+            <a className="dock-nav-item" href="#kho">
+              {copy.stock}
+            </a>
+          </nav>
+
+          <nav className="dock-actions">
+            <LangPick lang={store.lang} label={copy.language} onChange={setLang} />
+            <button
+              type="button"
+              className="icon-btn theme-toggle-btn"
+              id="btn-theme-toggle"
+              aria-pressed={resolvedTheme === 'dark'}
+              aria-label={resolvedTheme === 'dark' ? copy.themeLight : copy.themeDark}
+              title={copy.themeToggle}
+              onClick={() =>
+                commit({ ...store, ui: { theme: resolvedTheme === 'dark' ? 'light' : 'dark' } })
+              }
+            >
+              {resolvedTheme === 'dark' ? <SunMark /> : <MoonMark />}
+            </button>
+            <Donate label={copy.donate} hint={copy.donateHint} closeLabel={copy.close} />
+            <button
+              type="button"
+              className="icon-btn sound-toggle-btn"
+              aria-pressed={store.sound}
+              aria-label={store.sound ? copy.soundMute : copy.soundUnmute}
+              title={store.sound ? copy.soundMute : copy.soundUnmute}
+              onClick={() => commit({ ...store, sound: !store.sound })}
+            >
+              <VolumeMark on={store.sound} />
+            </button>
+            <button type="button" className="dock-pill-btn" onClick={() => setMineOpen(true)}>
+              {copy.mine}
+            </button>
+          </nav>
+        </div>
       </header>
 
-      <div className="mode-bar">
-        <p className="mode-bar-label">{copy.modes}</p>
-        <div className="mode-bar-row" role="group" aria-label={copy.modes}>
-          {THEMES.map((id) => (
-            <button
-              key={id}
-              type="button"
-              aria-pressed={store.theme === id}
-              className={store.theme === id ? 'on' : undefined}
-              onClick={() => setMode(id)}
-            >
-              <ThemeMark id={id} />
-              {THEME_I18N[id]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <main className="main">
-        <div className="page-head">
-          <h1>{mode.title}</h1>
-          <p>
-            {mode.opens}: {store.picks.toLocaleString(LANG_LOCALE[store.lang])}
-            {store.theme === 'duyen' ? ` · ${mode.collection}: ${store.seen.length}/${pool.length}` : ''}
-            {result && !busy
-              ? ` · ${copy.last}: ${dishName(result, store.lang)}`
-              : ` · ${copy.inStock}: ${eligible.length} ${copy.dishes}`}
-            {storageError ? ` · ${storageError}` : ''}
-          </p>
-        </div>
-
-        <section className="stage" id="chon" aria-live="polite">
-          <Scene
-            mode={store.theme}
-            busy={busy}
-            disabled={busy || empty || !customValid}
-            actLabel={busy ? mode.picking : result ? mode.again : mode.pick}
-            liveName={live && !busy ? dishName(live, store.lang) : ''}
-            slots={lots.map((dish, index) => ({
-              label: dish ? dishName(dish, store.lang) : String(index + 1),
-              open: lotsDealt && slot === index && !busy,
-              on: slot === index,
-            }))}
-            clockLine={mode.clock}
-            seenLabel={`${mode.collection} ${store.seen.length}/${pool.length}`}
-            onAct={pick}
-            onSlot={pickFromSlot}
-            onCollection={() => setAlbumOpen(true)}
-          />
-          <div className="stage-copy">
-            <p className="eyebrow">{mode.kicker}</p>
-            <p className={empty ? 'dish is-empty' : 'dish'}>{boardText}</p>
-            <p className="lede">{empty ? copy.hintEmpty : mode.lede}</p>
+      <div className="exhibition-room">
+        <section className="hero-landing-section" id="chon" aria-live="polite">
+          <div className="hero-copy-block">
+            <h1 className="hero-main-title">
+              {store.lang === 'vi' ? (
+                <>
+                  Hôm nay ăn gì?{' '}
+                  <span className="hero-shimmer-wrapper">
+                    <span className="hero-shimmer-text">để quẻ trưa quyết.</span>
+                    <svg aria-hidden="true" viewBox="0 0 64 60" fill="none" className="hero-doodle-spark">
+                      <path
+                        d="M32 52 C 22 44, 7 35, 6 21 C 5 11, 14 6, 21 9 C 26 11, 30 16, 32 20 C 34 15, 39 10, 45 9 C 52 8, 59 13, 58 22 C 56 36, 41 45, 32 52 Z"
+                        stroke="currentColor"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+                </>
+              ) : (
+                <>
+                  What to eat today?{' '}
+                  <span className="hero-shimmer-wrapper">
+                    <span className="hero-shimmer-text">let fortune decide.</span>
+                    <svg aria-hidden="true" viewBox="0 0 64 60" fill="none" className="hero-doodle-spark">
+                      <path
+                        d="M32 52 C 22 44, 7 35, 6 21 C 5 11, 14 6, 21 9 C 26 11, 30 16, 32 20 C 34 15, 39 10, 45 9 C 52 8, 59 13, 58 22 C 56 36, 41 45, 32 52 Z"
+                        stroke="currentColor"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+                </>
+              )}
+            </h1>
+            <p className="hero-sub-lede">{empty ? copy.hintEmpty : mode.lede}</p>
           </div>
-          <ol className="steps">
-            <li>
-              <small>01</small> {copy.step1}
-            </li>
-            <li>
-              <small>02</small> {copy.step2}
-            </li>
-            <li>
-              <small>03</small> {copy.step3}
-            </li>
-          </ol>
+
+          {storageError ? (
+            <ErrorCard
+              title={copy.errorStorageTitle}
+              message={storageError}
+              closeLabel={copy.close}
+              onClose={() => setStorageError('')}
+            />
+          ) : null}
+
+          {/* Central Product Showcase Stage (Surrounded by tilted floating cards) */}
+          <div className="hero-stage-container">
+            <div className="hero-ambient-glow" aria-hidden="true" />
+
+            <LandingHeroMockups
+              lang={store.lang}
+              areaQuery={area.query ?? area.label}
+              onPickThisOrThat={(dishTitle) => {
+                const found = pool.find((d) => d.name === dishTitle)
+                if (found) pickOne(found)
+              }}
+            />
+
+            <div className="hero-board-card">
+              <div className="board-card-header">
+                <div className="board-title-group">
+                  <p className="board-card-title">{mode.title}</p>
+                  <p className="board-card-badge">
+                    <span className="status-live-dot" />
+                    <span>
+                      {eligible.length} {copy.dishes} {copy.inStock}
+                    </span>
+                  </p>
+                </div>
+                <div className="board-header-actions">
+                  <button
+                    type="button"
+                    className="board-sound-pill"
+                    onClick={() => commit({ ...store, sound: !store.sound })}
+                    title={store.sound ? copy.soundMute : copy.soundUnmute}
+                  >
+                    <VolumeMark on={store.sound} />
+                    <span>
+                      {store.sound
+                        ? store.lang === 'vi'
+                          ? 'Bật âm'
+                          : 'Sound ON'
+                        : store.lang === 'vi'
+                          ? 'Tắt âm'
+                          : 'Muted'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="board-display-zone">
+                <p className={empty ? 'board is-empty' : 'board'}>{boardText}</p>
+                <Scene
+                  busy={busy}
+                  disabled={busy || empty || !customValid}
+                  slots={lots.map((dish, index) => ({
+                    label: dish ? dishName(dish, store.lang) : String(index + 1),
+                    open: lotsDealt && slot === index && !busy,
+                    on: slot === index,
+                  }))}
+                  onSlot={pickFromSlot}
+                />
+              </div>
+
+              <div className="board-card-phases">
+                <div className="phases-pill-track">
+                  <span className={!lotsDealt ? 'phase-step active' : 'phase-step'}>
+                    1. {copy.step1}
+                  </span>
+                  <span className={lotsDealt && slot == null ? 'phase-step active' : 'phase-step'}>
+                    2. {copy.step2}
+                  </span>
+                  <span className={slot != null ? 'phase-step active' : 'phase-step'}>
+                    3. {copy.step3}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="hero-cta-group">
+            <MagnetButton className="cta hero-main-cta" onClick={pick} disabled={busy || empty || !customValid}>
+              {busy ? mode.picking : !lotsDealt ? mode.pick : slot == null ? mode.choose : mode.again}
+            </MagnetButton>
+            <a href="#kho" className="hero-secondary-btn">
+              <span className="pulse-dot-green" />
+              <span>{copy.stock} ({eligible.length})</span>
+            </a>
+          </div>
+
+          <div className="hero-microcopy">
+            <button type="button" className="seen-pill" onClick={() => setAlbumOpen(true)}>
+              {mode.collection} {seenCount}/{pool.length}
+            </button>
+            <span className="micro-divider">·</span>
+            <span>
+              {mode.opens} <strong>{store.picks.toLocaleString(LANG_LOCALE[store.lang])}</strong>
+            </span>
+            <span className="micro-divider">·</span>
+            <span>{store.lang === 'vi' ? 'Lưu trên trình duyệt này' : 'Saved on this browser'}</span>
+          </div>
         </section>
 
-        <section className="controls">
-          <div className="course-row" role="group" aria-label={copy.meal}>
-            {(['chinh', 'vat', 'uong', 'nhau'] as Course[]).map((id) => (
-              <button
-                key={id}
-                type="button"
-                aria-pressed={store.filters.course === id}
-                className={store.filters.course === id ? 'on' : undefined}
-                disabled={busy}
-                onClick={() =>
-                  commit({
-                    ...store,
-                    filters: { ...store.filters, course: store.filters.course === id ? null : id },
-                  })
-                }
-              >
-                <CourseMark id={id} />
-                {COURSE_I18N[store.lang][id]}
-              </button>
-            ))}
-          </div>
-          <StampMany
-            label={copy.type}
-            large
-            options={TYPE_OPTIONS.map(([id]) => ({ id, label: typeLabel(id, store.lang) }))}
-            value={store.filters.types}
-            onToggle={(id: DishType) => {
-              if (busy) return
-              commit({ ...store, filters: { ...store.filters, types: toggle(store.filters.types, id) } })
-            }}
-          />
-          <div className={store.spendCustom ? 'open-row has-custom' : 'open-row'}>
-            <details className="place" ref={placeBox}>
-              <summary>{area.query ?? area.label}</summary>
-              <ul>
-                {AREAS.map((item) => (
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      className={item.id === area.id ? 'on' : undefined}
-                      onClick={() => {
-                        commit({ ...store, area: item.id })
-                        if (placeBox.current) placeBox.current.open = false
-                      }}
-                    >
-                      {item.query ?? item.label}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </details>
-            <label className="budget">
-              <span className="sr">{copy.budget}</span>
-              <Select
-                label={copy.budget}
-                value={budgetSelect}
-                disabled={busy}
-                options={[
-                  { id: '', label: copy.anyBudget },
-                  ...BUDGETS.map((n) => ({ id: String(n), label: `${n}k` })),
-                  { id: 'custom', label: copy.customBudget },
-                ]}
-                onChange={(value) => {
-                  if (value === 'custom') {
-                    const next = store.filters.budget ?? 50
-                    setSpendDraft(String(next))
+        {/* 5-Column Bento Features Grid */}
+        <LandingFeatures lang={store.lang} />
+
+        {/* Tactile Control Console (Bộ điều khiển cơ khí chìm) */}
+        <section className="tactile-console" id="bo-loc">
+          <div className="console-panel">
+            <div className="console-panel-header">
+              <span className="console-panel-title">{copy.step1}</span>
+              <label className="console-veg-switch">
+                <input
+                  type="checkbox"
+                  checked={Boolean(store.filters.veg)}
+                  disabled={busy}
+                  onChange={() => commit({ ...store, filters: { ...store.filters, veg: !store.filters.veg } })}
+                />
+                <span className="switch-slider" />
+                <span className="switch-text">{copy.vegOnly}</span>
+              </label>
+            </div>
+
+            {/* Course Row - Bữa ăn */}
+            <div className="console-course-row" role="group" aria-label={copy.meal}>
+              {(['chinh', 'vat', 'uong', 'nhau'] as Course[]).map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={store.filters.course === id}
+                  className={store.filters.course === id ? 'console-course-btn on' : 'console-course-btn'}
+                  disabled={busy}
+                  onClick={() =>
                     commit({
                       ...store,
-                      spendCustom: true,
-                      filters: { ...store.filters, budget: next },
+                      filters: { ...store.filters, course: store.filters.course === id ? null : id },
                     })
-                    return
                   }
+                >
+                  <CourseMark id={id} />
+                  <span>{COURSE_I18N[store.lang][id]}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Loại món StampMany */}
+            <div className="console-field-block">
+              <StampMany
+                label={copy.type}
+                large
+                options={TYPE_OPTIONS.map(([id]) => ({ id, label: typeLabel(id, store.lang) }))}
+                value={store.filters.types}
+                onToggle={(id: DishType) => {
+                  if (busy) return
+                  commit({ ...store, filters: { ...store.filters, types: toggle(store.filters.types, id) } })
+                }}
+              />
+            </div>
+
+            {/* Open Row: Khu vực & Ngân sách */}
+            <div className={store.spendCustom ? 'console-open-row has-custom' : 'console-open-row'}>
+              <div className="place-selector-dial">
+                <span className="sr">{copy.around}</span>
+                <Select
+                  label={copy.around}
+                  value={store.area}
+                  disabled={busy}
+                  options={AREAS.map((item) => ({ id: item.id, label: item.query ?? item.label }))}
+                  onChange={(id) => commit({ ...store, area: id })}
+                />
+              </div>
+
+              <div className="budget-selector-dial">
+                <span className="sr">{copy.budget}</span>
+                <Select
+                  label={copy.budget}
+                  value={budgetSelect}
+                  disabled={busy}
+                  options={[
+                    { id: '', label: copy.anyBudget },
+                    ...BUDGETS.map((n) => ({ id: String(n), label: `${n}k` })),
+                    { id: 'custom', label: copy.customBudget },
+                  ]}
+                  onChange={(value) => {
+                    if (value === 'custom') {
+                      const next = store.filters.budget ?? 50
+                      setSpendDraft(String(next))
+                      commit({
+                        ...store,
+                        spendCustom: true,
+                        filters: { ...store.filters, budget: next },
+                      })
+                      return
+                    }
+                    commit({
+                      ...store,
+                      spendCustom: false,
+                      filters: {
+                        ...store.filters,
+                        budget: value ? Number(value) : null,
+                      },
+                    })
+                  }}
+                />
+              </div>
+
+              {store.spendCustom && (
+                <label className="budget-custom-input">
+                  <span className="sr">{copy.customSpend}</span>
+                  <input
+                    inputMode="numeric"
+                    spellCheck={false}
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    disabled={busy}
+                    value={spendDraft}
+                    aria-label={copy.customSpend}
+                    onChange={(event) => {
+                      const raw = event.target.value
+                      setSpendDraft(raw)
+                      const next = Number(raw)
+                      if (Number.isInteger(next) && next >= 30 && next <= 180) {
+                        commit({ ...store, spendCustom: true, filters: { ...store.filters, budget: next } })
+                      }
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+
+            {store.spendCustom && !customValid && <p className="spend-error">{copy.spendError}</p>}
+
+            {/* Xuất xứ & Vùng miền */}
+            <div className="console-control-row">
+              <StampMany
+                label={copy.cuisine}
+                options={CUISINE_OPTIONS.map(([id]) => ({ id, label: cuisineLabel(id, store.lang) }))}
+                value={store.filters.cuisines}
+                onToggle={(id: Cuisine) => {
+                  if (busy) return
                   commit({
                     ...store,
-                    spendCustom: false,
-                    filters: {
-                      ...store.filters,
-                      budget: value ? Number(value) : null,
-                    },
+                    filters: { ...store.filters, cuisines: toggle(store.filters.cuisines, id) },
                   })
                 }}
               />
-            </label>
-            {store.spendCustom && (
-              <label className="budget">
-                <span className="sr">{copy.customSpend}</span>
-                <input
-                  className="budget-custom"
-                  inputMode="numeric"
-                  disabled={busy}
-                  value={spendDraft}
-                  aria-label={copy.customSpend}
-                  onChange={(event) => {
-                    const raw = event.target.value
-                    setSpendDraft(raw)
-                    const next = Number(raw)
-                    if (Number.isInteger(next) && next >= 30 && next <= 180) {
-                      commit({ ...store, spendCustom: true, filters: { ...store.filters, budget: next } })
-                    }
-                  }}
-                />
-              </label>
-            )}
-            <button type="button" className="go" onClick={pick} disabled={busy || empty || !customValid}>
-              {busy
-                ? mode.picking
-                : store.theme === 'que'
-                  ? !lotsDealt
-                    ? mode.pick
-                    : slot == null
-                      ? mode.choose
-                      : mode.again
-                  : result
-                    ? mode.again
-                    : mode.pick}
-            </button>
-          </div>
-          {store.spendCustom && !customValid && <p className="spend-error">{copy.spendError}</p>}
-          <div className="toggle-row">
-            <label className="veg-toggle">
-              <input
-                type="checkbox"
-                checked={Boolean(store.filters.veg)}
-                disabled={busy}
-                onChange={() => commit({ ...store, filters: { ...store.filters, veg: !store.filters.veg } })}
+              <StampMany
+                label={copy.region}
+                options={REGION_OPTIONS.map(([id]) => ({ id, label: regionLabel(id, store.lang) }))}
+                value={store.filters.regions}
+                onToggle={(id: Region) => {
+                  if (busy) return
+                  commit({
+                    ...store,
+                    filters: { ...store.filters, regions: toggle(store.filters.regions, id) },
+                  })
+                }}
               />
-              {copy.vegOnly}
-            </label>
-            <p className="hint">
+            </div>
+
+            <p className="console-hint">
               {area.query ? `${copy.around} ${area.query}.` : copy.nearby}
               {eligible.length > 0 && Math.abs(mean - target) > 0.5
                 ? ` ${copy.meanHint}: ~${Math.round(mean)}k.`
                 : ''}
             </p>
           </div>
-          <div className="control-row">
-            <StampMany
-              label={copy.cuisine}
-              options={CUISINE_OPTIONS.map(([id]) => ({ id, label: cuisineLabel(id, store.lang) }))}
-              value={store.filters.cuisines}
-              onToggle={(id: Cuisine) => {
-                if (busy) return
-                commit({
-                  ...store,
-                  filters: { ...store.filters, cuisines: toggle(store.filters.cuisines, id) },
-                })
-              }}
-            />
-            <StampMany
-              label={copy.region}
-              options={REGION_OPTIONS.map(([id]) => ({ id, label: regionLabel(id, store.lang) }))}
-              value={store.filters.regions}
-              onToggle={(id: Region) => {
-                if (busy) return
-                commit({
-                  ...store,
-                  filters: { ...store.filters, regions: toggle(store.filters.regions, id) },
-                })
-              }}
-            />
-          </div>
         </section>
 
         {recent.length > 0 && (
-          <p className="history">
-            {copy.recent}:{' '}
-            {recent.map((dish) => (
-              <button key={dish.id} type="button" className="text-btn" onClick={() => pickOne(dish)}>
-                {dishName(dish, store.lang)}
-              </button>
-            ))}
-          </p>
+          <div className="history-drawer">
+            <span className="history-label">{copy.recent}:</span>
+            <div className="history-pills">
+              {recent.map((dish) => (
+                <button key={dish.id} type="button" className="history-pill" onClick={() => pickOne(dish)}>
+                  {dishName(dish, store.lang)}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
 
-        <section className="catalog" id="kho">
-          <div className="catalog-heading">
-            <h2>{mode.catalog}</h2>
-            <label className="search">
-              <span className="sr">{copy.search}</span>
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={copy.search}
-              />
-            </label>
+        {/* 4-Step Process Flow with Curved SVG Arrows */}
+        <LandingSteps lang={store.lang} />
+      </div>
+
+      {/* Museum Archive Drawer (Kho Lưu Trữ Ẩm Thực) */}
+      <section className="museum-archive" id="kho">
+        <div className="archive-inner">
+          <div className="archive-heading">
+            <div className="archive-title-group">
+              <span className="archive-kicker">{store.lang === 'vi' ? 'Bảo tàng hương vị' : 'Culinary Archive'}</span>
+              <h2 className="archive-title">{mode.catalog}</h2>
+              <p className="archive-subtitle">
+                {store.lang === 'vi'
+                  ? `Khám phá ${inventory.length} món ngon truyền thống chọn lọc từ khắp ba miền.`
+                  : `Explore ${inventory.length} classic Vietnamese & regional dishes.`}
+              </p>
+            </div>
+            <div className="archive-controls">
+              <label className="archive-search">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" className="search-icon">
+                  <circle cx="9" cy="9" r="6" />
+                  <path d="M13.5 13.5L18 18" />
+                </svg>
+                <input
+                  value={query}
+                  spellCheck={false}
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder={store.lang === 'vi' ? 'Tìm tên món, bún, cơm, phở...' : copy.search}
+                />
+              </label>
+              <div className="archive-count-pill">
+                <span>{listed.length} / {inventory.length}</span>
+              </div>
+            </div>
           </div>
+
           <div className="catalog-grid">
             {listed.map((dish) => (
               <Card
@@ -636,23 +851,43 @@ export function App() {
               />
             ))}
           </div>
+
           {inventory.length > 24 && (
-            <button type="button" className="more" onClick={() => setMore((value) => !value)}>
-              {more ? copy.less : copy.more}
-            </button>
+            <div className="archive-more-wrap">
+              <button type="button" className="archive-more-btn" onClick={() => setMore((value) => !value)}>
+                <span>{more ? copy.less : copy.more}</span>
+                <svg
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className={more ? 'more-chevron rotate' : 'more-chevron'}
+                >
+                  <path d="M4 6l4 4 4-4" />
+                </svg>
+              </button>
+            </div>
           )}
-        </section>
-      </main>
+        </div>
+      </section>
 
-      <footer className="foot">
-        <span>{copy.brand}</span>
-        <a className="foot-mail" href="mailto:nhmanh.dev@gmail.com">
-          nhmanh.dev@gmail.com
-        </a>
-      </footer>
+      {/* Final Landing CTA Banner */}
+      <LandingCta lang={store.lang} onPickNow={pick} />
 
+      {/* Footer */}
+      <Footer brand={copy.brand} lang={store.lang} onOpenMine={() => setMineOpen(true)} />
+
+      {/* Winner Ceremonial Plaque */}
       {reveal && result && (
-        <div className="winner-back" onClick={() => setReveal(false)}>
+        <div
+          className="winner-back"
+          onClick={() => {
+            setReveal(false)
+            setCopied(false)
+            setCopyError(false)
+          }}
+        >
+          <Tilt className="winner-tilt">
           <div
             className="winner"
             role="dialog"
@@ -660,6 +895,7 @@ export function App() {
             aria-labelledby="winner-title"
             onClick={(event) => event.stopPropagation()}
           >
+            <div className="winner-gilded-rim" />
             <p className="eyebrow">{mode.kicker}</p>
             <h2 id="winner-title">{dishName(result, store.lang)}</h2>
             <p className="winner-price">
@@ -702,19 +938,39 @@ export function App() {
                   try {
                     await navigator.clipboard.writeText(line)
                     setCopied(true)
+                    setCopyError(false)
                     window.setTimeout(() => setCopied(false), 1500)
                   } catch {
                     setCopied(false)
+                    setCopyError(true)
                   }
                 }}
               >
                 {copied ? copy.copied : copy.copyResult}
               </button>
-              <button type="button" className="ghost" onClick={() => setReveal(false)}>
-                {copy.continue}
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => {
+                  setReveal(false)
+                  setCopied(false)
+                  setCopyError(false)
+                }}
+              >
+                {copy.close}
               </button>
             </div>
+            {copied && <p className="winner-feedback">{copy.copied}</p>}
+            {copyError ? (
+              <ErrorCard
+                title={copy.errorCopyTitle}
+                message={copy.errorCopyBody}
+                closeLabel={copy.close}
+                onClose={() => setCopyError(false)}
+              />
+            ) : null}
           </div>
+          </Tilt>
         </div>
       )}
 
@@ -764,44 +1020,12 @@ export function App() {
         onClose={() => setMineOpen(false)}
         disabled={store.disabled}
         custom={store.custom}
-        onToggleBuiltin={(id) => {
-          const next = toggle(store.disabled, id)
-          const remain = eligibleDishes(pool, next, { types: [], cuisines: [], regions: [] })
-          if (remain.length === 0) return
-          commit({ ...store, disabled: next, lastId: store.lastId === id ? null : store.lastId })
-        }}
-        onEnableAll={() => commit({ ...store, disabled: [] })}
-        onClearSaved={() =>
-          commit({
-            ...store,
-            custom: [],
-            disabled: [],
-            lastId: store.lastId && CATALOG.some((dish) => dish.id === store.lastId) ? store.lastId : null,
-            recent: store.recent.filter((id) => CATALOG.some((dish) => dish.id === id)),
-          })
-        }
-        onAddCustom={(dish) => commit({ ...store, custom: [...store.custom, dish] })}
-        onUpdateCustom={(dish) =>
-          commit({
-            ...store,
-            custom: store.custom.map((item) => (item.id === dish.id ? dish : item)),
-          })
-        }
-        onRemoveCustom={(id) => {
-          const nextCustom = store.custom.filter((dish) => dish.id !== id)
-          const remain = eligibleDishes([...CATALOG, ...nextCustom], store.disabled, {
-            types: [],
-            cuisines: [],
-            regions: [],
-          })
-          if (remain.length === 0) return
-          commit({
-            ...store,
-            custom: nextCustom,
-            lastId: store.lastId === id ? null : store.lastId,
-            recent: store.recent.filter((item) => item !== id),
-          })
-        }}
+        onToggleBuiltin={toggleBuiltin}
+        onEnableAll={enableAll}
+        onClearSaved={clearSaved}
+        onAddCustom={addCustom}
+        onUpdateCustom={updateCustom}
+        onRemoveCustom={removeCustom}
       />
     </div>
   )

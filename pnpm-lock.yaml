@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      gsap:
+        specifier: ^3.15.0
+        version: 3.15.0
+      lottie-react:
+        specifier: ^3.1.2
+        version: 3.1.2(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react:
         specifier: ^19.1.1
         version: 19.3.0
@@ -509,6 +515,9 @@ packages:
     resolution: {integrity: sha512-3hN7NaskYvMDLQY55gnW3NQ+mesEAepTqlg+VEbj7zzqEMBVNhzcGYYeqFo/TlYz6eQiFcp1HcsCZO+nGgS8zg==}
     engines: {node: '>=6.9.0'}
 
+  gsap@3.15.0:
+    resolution: {integrity: sha512-dMW4CWBTUK1AEEDeZc1g4xpPGIrSf9fJF960qbTZmN/QwZIWY5wgliS6JWl9/25fpTGJrMRtSjGtOmPnfjZB+A==}
+
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
 
@@ -521,6 +530,15 @@ packages:
     resolution: {integrity: sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg==}
     engines: {node: '>=6'}
     hasBin: true
+
+  lottie-react@3.1.2:
+    resolution: {integrity: sha512-otbTz+Kk1ksYzcWFAlcH8xFGBWkW/hUNEHy6gLvYf7kgEkZxyPT8lXJeBu/5o0xo0cdMwvd/lwkpuXCTSQmJdQ==}
+    peerDependencies:
+      react: ^18.2.0 || ^19.0.0
+      react-dom: ^18.2.0 || ^19.0.0
+
+  lottie-web@5.13.0:
+    resolution: {integrity: sha512-+gfBXl6sxXMPe8tKQm7qzLnUy5DUPJPKIyRHwtpCpyUEYjHYRJC/5gjUvdkuO2c3JllrPtHXH5UJJK8LRYl5yQ==}
 
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
@@ -1031,11 +1049,21 @@ snapshots:
 
   gensync@1.0.0-beta.2: {}
 
+  gsap@3.15.0: {}
+
   js-tokens@4.0.0: {}
 
   jsesc@3.1.0: {}
 
   json5@2.2.3: {}
+
+  lottie-react@3.1.2(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
+    dependencies:
+      lottie-web: 5.13.0
+      react: 19.3.0
+      react-dom: 19.3.0(react@19.3.0)
+
+  lottie-web@5.13.0: {}
 
   lru-cache@5.1.1:
     dependencies:
